@@ -28,6 +28,7 @@
 #include "providers/seventv/SeventvAPI.hpp"
 #include "providers/seventv/SeventvEmotes.hpp"
 #include "providers/seventv/SeventvEventAPI.hpp"
+#include "providers/tinyemotes/TinyEmotes.hpp"
 #include "providers/twitch/api/Helix.hpp"
 #include "providers/twitch/ChannelPointReward.hpp"
 #include "providers/twitch/eventsub/Controller.hpp"
@@ -59,6 +60,8 @@
 #include <rapidjson/document.h>
 
 #include <algorithm>
+#include <optional>
+#include <utility>
 
 namespace chatterino {
 
@@ -110,6 +113,8 @@ TwitchChannel::TwitchChannel(const QString &name)
     , seventvEmotes_(std::make_shared<EmoteMap>())
 {
     qCDebug(chatterinoTwitch) << "[TwitchChannel" << name << "] Opened";
+
+    this->tinyEmotes_.emplace("localhost:8000", std::make_shared<EmoteMap>());
 
     this->bSignals_.emplace_back(
         getApp()->getAccounts()->twitch.currentUserChanged.connect([this] {
@@ -434,6 +439,42 @@ void TwitchChannel::refreshSevenTVChannelEmotes(bool manualRefresh)
         manualRefresh, cacheHit);
 }
 
+void TwitchChannel::refreshTinyChannelEmotes(bool manualRefresh)
+{
+    for (auto &url : this->tinyEmotes_)
+    {
+        if (!Settings::instance().enableTinyChannelEmotes)
+        {
+            url.second.set(EMPTY_EMOTE_MAP);
+            continue;
+        }
+
+        bool cacheHit = readProviderEmotesCache(
+            this->roomId(), url.first,
+            [this, &url, weak = weakOf<Channel>(this)](auto jsonDoc) {
+                if (auto shared = weak.lock())
+                {
+                    auto emoteMap = tinyemotes::detail::parseChannelEmotes(
+                        url.first, jsonDoc.object(), this->getLocalizedName());
+                    this->setTinyEmotes(
+                        url.first, std::make_shared<const EmoteMap>(emoteMap));
+                }
+            });
+
+        TinyEmotes::loadChannel(
+            url.first, weakOf<Channel>(this), this->roomId(),
+            this->getLocalizedName(),
+            [this, &url, weak = weakOf<Channel>(this)](auto &&emoteMap) {
+                if (auto shared = weak.lock())
+                {
+                    this->setTinyEmotes(
+                        url.first, std::make_shared<const EmoteMap>(emoteMap));
+                }
+            },
+            manualRefresh, cacheHit);
+    }
+}
+
 void TwitchChannel::setBttvEmotes(std::shared_ptr<const EmoteMap> &&map)
 {
     this->bttvEmotes_.set(std::move(map));
@@ -447,6 +488,20 @@ void TwitchChannel::setFfzEmotes(std::shared_ptr<const EmoteMap> &&map)
 void TwitchChannel::setSeventvEmotes(std::shared_ptr<const EmoteMap> &&map)
 {
     this->seventvEmotes_.set(std::move(map));
+}
+
+void TwitchChannel::setTinyEmotes(const QString &instanceUrl,
+                                  std::shared_ptr<const EmoteMap> &&map)
+{
+    auto it = this->tinyEmotes_.find(instanceUrl);
+    if (it != this->tinyEmotes_.end())
+    {
+        it->second.set(std::move(map));
+    }
+    else
+    {
+        this->tinyEmotes_.emplace(instanceUrl, std::move(map));
+    }
 }
 
 void TwitchChannel::addQueuedRedemption(const QString &rewardId,
@@ -718,6 +773,7 @@ void TwitchChannel::roomIdChanged()
     this->refreshFFZChannelEmotes(false);
     this->refreshBTTVChannelEmotes(false);
     this->refreshSevenTVChannelEmotes(false);
+    this->refreshTinyChannelEmotes(false);
     this->joinBttvChannel();
     this->listenSevenTVCosmetics();
     getApp()->getTwitchLiveController()->add(
@@ -1016,6 +1072,25 @@ std::optional<EmotePtr> TwitchChannel::seventvEmote(const EmoteName &name) const
     return it->second;
 }
 
+std::optional<EmotePtr> TwitchChannel::tinyEmote(const QString &instanceUrl,
+                                                 const EmoteName &name) const
+{
+    auto map = this->tinyEmotes_.find(instanceUrl);
+    if (map == this->tinyEmotes_.end())
+    {
+        return std::nullopt;
+    }
+
+    auto emotes = map->second.get();
+    auto it = emotes->find(name);
+
+    if (it == emotes->end())
+    {
+        return std::nullopt;
+    }
+    return it->second;
+}
+
 std::shared_ptr<const EmoteMap> TwitchChannel::localTwitchEmotes() const
 {
     return this->localTwitchEmotes_.get();
@@ -1034,6 +1109,17 @@ std::shared_ptr<const EmoteMap> TwitchChannel::ffzEmotes() const
 std::shared_ptr<const EmoteMap> TwitchChannel::seventvEmotes() const
 {
     return this->seventvEmotes_.get();
+}
+
+std::optional<std::shared_ptr<const EmoteMap>> TwitchChannel::tinyEmotes(
+    const QString &instanceUrl) const
+{
+    auto map = this->tinyEmotes_.find(instanceUrl);
+    if (map == this->tinyEmotes_.end())
+    {
+        return std::nullopt;
+    }
+    return map->second.get();
 }
 
 const QString &TwitchChannel::seventvUserID() const

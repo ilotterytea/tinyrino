@@ -358,6 +358,11 @@ set(SOURCE_FILES
         providers/bttv/liveupdates/BttvLiveUpdateSubscription.cpp
         providers/bttv/liveupdates/BttvLiveUpdateSubscription.hpp
 
+        providers/tinyemotes/TinyEmotes.cpp
+        providers/tinyemotes/TinyEmotes.hpp
+        providers/tinyemotes/liveupdates/TinyEmotesLiveUpdateMessages.hpp
+        providers/tinyemotes/liveupdates/TinyEmotesLiveUpdateMessages.cpp
+
         providers/chatterino/ChatterinoBadges.cpp
         providers/chatterino/ChatterinoBadges.hpp
 

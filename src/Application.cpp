@@ -18,6 +18,7 @@
 #include "providers/pronouns/Pronouns.hpp"
 #include "providers/seventv/SeventvAPI.hpp"
 #include "providers/seventv/SeventvEmotes.hpp"
+#include "providers/tinyemotes/TinyEmotes.hpp"
 #include "providers/twitch/eventsub/Controller.hpp"
 #include "providers/twitch/TwitchBadges.hpp"
 #include "singletons/ImageUploader.hpp"
@@ -196,6 +197,7 @@ Application::Application(Settings &_settings, const Paths &paths,
     , ffzEmotes(new FfzEmotes)
     , seventvEmotes(new SeventvEmotes)
     , seventvEventAPI(makeSeventvEventAPI(_settings))
+    , tinyEmotes(new TinyEmotes)
     , linkResolver(new LinkResolver)
     , streamerMode(new StreamerMode)
     , twitchUsers(new TwitchUsers)
@@ -286,6 +288,7 @@ void Application::initialize(Settings &settings, const Paths &paths)
     this->bttvEmotes->loadEmotes();
     this->ffzEmotes->loadEmotes();
     this->seventvEmotes->loadGlobalEmotes();
+    this->tinyEmotes->loadEmotes();
 
     this->twitch->initialize();
 
@@ -363,6 +366,11 @@ int Application::run()
     getSettings()->enableSevenTVChannelEmotes.connect(
         [this] {
             this->twitch->reloadAllSevenTVChannelEmotes();
+        },
+        false);
+    getSettings()->enableTinyChannelEmotes.connect(
+        [this] {
+            this->twitch->reloadAllTinyChannelEmotes();
         },
         false);
 
@@ -606,6 +614,14 @@ FfzEmotes *Application::getFfzEmotes()
     assert(this->ffzEmotes);
 
     return this->ffzEmotes.get();
+}
+
+TinyEmotes *Application::getTinyEmotes()
+{
+    assertInGuiThread();
+    assert(this->tinyEmotes);
+
+    return this->tinyEmotes.get();
 }
 
 SeventvEmotes *Application::getSeventvEmotes()

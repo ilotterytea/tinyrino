@@ -715,6 +715,14 @@ void GeneralPage::initLayout(GeneralPageView &layout)
                      "is sent and others won't see your cosmetics.")
         ->addKeywords({"seventv"})
         ->addTo(layout);
+    SettingWidget::checkbox("Show TinyEmotes global emotes",
+                            s.enableTinyGlobalEmotes)
+        ->addKeywords({"tinyemotes"})
+        ->addTo(layout);
+    SettingWidget::checkbox("Show TinyEmotes channel emotes",
+                            s.enableTinyChannelEmotes)
+        ->addKeywords({"tinyemotes"})
+        ->addTo(layout);
 
     layout.addTitle("Streamer Mode");
     layout.addDescription(

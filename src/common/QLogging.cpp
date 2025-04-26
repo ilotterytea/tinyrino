@@ -10,6 +10,7 @@ Q_LOGGING_CATEGORY(chatterinoApp, "chatterino.app", logThreshold);
 Q_LOGGING_CATEGORY(chatterinoArgs, "chatterino.args", logThreshold);
 Q_LOGGING_CATEGORY(chatterinoBenchmark, "chatterino.benchmark", logThreshold);
 Q_LOGGING_CATEGORY(chatterinoBttv, "chatterino.bttv", logThreshold);
+Q_LOGGING_CATEGORY(chatterinoTinyemotes, "chatterino.tinyemotes", logThreshold);
 Q_LOGGING_CATEGORY(chatterinoCache, "chatterino.cache", logThreshold);
 Q_LOGGING_CATEGORY(chatterinoCommands, "chatterino.commands", logThreshold);
 Q_LOGGING_CATEGORY(chatterinoCommon, "chatterino.common", logThreshold);

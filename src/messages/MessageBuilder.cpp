@@ -24,6 +24,7 @@
 #include "providers/seventv/SeventvBadges.hpp"
 #include "providers/seventv/SeventvEmotes.hpp"
 #include "providers/seventv/SeventvPersonalEmotes.hpp"
+#include "providers/tinyemotes/TinyEmotes.hpp"
 #include "providers/twitch/api/Helix.hpp"
 #include "providers/twitch/ChannelPointReward.hpp"
 #include "providers/twitch/TwitchAccount.hpp"
@@ -425,10 +426,12 @@ std::tuple<std::optional<EmotePtr>, MessageElementFlags, bool> parseEmote(
     TwitchChannel *twitchChannel, const QString &userID, const EmoteName &name)
 {
     // Emote order:
+    //  - TinyEmotes Channel Emotes
     //  - 7TV Personal Emotes
     //  - FrankerFaceZ Channel
     //  - BetterTTV Channel
     //  - 7TV Channel
+    //  - TinyEmotes Global Emotes
     //  - FrankerFaceZ Global
     //  - BetterTTV Global
     //  - 7TV Global
@@ -436,11 +439,21 @@ std::tuple<std::optional<EmotePtr>, MessageElementFlags, bool> parseEmote(
     const auto *globalFfzEmotes = getApp()->getFfzEmotes();
     const auto *globalBttvEmotes = getApp()->getBttvEmotes();
     const auto *globalSeventvEmotes = getApp()->getSeventvEmotes();
+    const auto *globalTinyEmotes = getApp()->getTinyEmotes();
 
     std::optional<EmotePtr> emote{};
 
     if (twitchChannel != nullptr)
     {
+        emote = twitchChannel->tinyEmote("localhost:8000", name);
+        if (emote) {
+            return {
+                emote,
+                MessageElementFlag::TinyEmote,
+                false
+            };
+        }
+
         // Check for channel emotes
         emote =
             getApp()->getSeventvPersonalEmotes()->getEmoteForUser(userID, name);
@@ -485,6 +498,15 @@ std::tuple<std::optional<EmotePtr>, MessageElementFlags, bool> parseEmote(
     }
 
     // Check for global emotes
+
+    emote = globalTinyEmotes->emote("localhost:8000", name);
+    if (emote) {
+        return {
+            emote,
+            MessageElementFlag::TinyEmote,
+            false
+        };
+    }
 
     emote = globalFfzEmotes->emote(name);
     if (emote)

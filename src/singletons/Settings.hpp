@@ -369,6 +369,9 @@ public:
     BoolSetting enableSevenTVEventAPI = {"/emotes/seventv/eventapi", true};
     BoolSetting sendSevenTVActivity = {"/emotes/seventv/sendActivity", true};
 
+    BoolSetting enableTinyGlobalEmotes = {"/emotes/tiny/global", true};
+    BoolSetting enableTinyChannelEmotes = {"/emotes/tiny/channel", true};
+
     BoolSetting allowAvifImages = {"/emotes/allowAvif", true};
 
     /// Links

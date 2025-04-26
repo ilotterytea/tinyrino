@@ -22,6 +22,8 @@
 #include <QRegularExpression>
 
 #include <atomic>
+#include <map>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <unordered_map>
@@ -50,6 +52,9 @@ namespace seventv::eventapi {
     struct EmoteRemoveDispatch;
     struct UserConnectionUpdateDispatch;
 }  // namespace seventv::eventapi
+
+struct TinyLiveUpdateEmoteUpdateAddMessage;
+struct TinyLiveUpdateEmoteRemoveMessage;
 
 struct ChannelPointReward;
 class MessageThread;
@@ -198,20 +203,27 @@ public:
     std::optional<EmotePtr> bttvEmote(const EmoteName &name) const;
     std::optional<EmotePtr> ffzEmote(const EmoteName &name) const;
     std::optional<EmotePtr> seventvEmote(const EmoteName &name) const;
+    std::optional<EmotePtr> tinyEmote(const QString &instanceUrl,
+                                      const EmoteName &name) const;
 
     std::shared_ptr<const EmoteMap> localTwitchEmotes() const;
     std::shared_ptr<const EmoteMap> bttvEmotes() const;
     std::shared_ptr<const EmoteMap> ffzEmotes() const;
     std::shared_ptr<const EmoteMap> seventvEmotes() const;
+    std::optional<std::shared_ptr<const EmoteMap>> tinyEmotes(
+        const QString &instanceUrl) const;
 
     void refreshTwitchChannelEmotes(bool manualRefresh);
     void refreshBTTVChannelEmotes(bool manualRefresh);
     void refreshFFZChannelEmotes(bool manualRefresh);
     void refreshSevenTVChannelEmotes(bool manualRefresh);
+    void refreshTinyChannelEmotes(bool manualRefresh);
 
     void setBttvEmotes(std::shared_ptr<const EmoteMap> &&map);
     void setFfzEmotes(std::shared_ptr<const EmoteMap> &&map);
     void setSeventvEmotes(std::shared_ptr<const EmoteMap> &&map);
+    void setTinyEmotes(const QString &instanceUrl,
+                       std::shared_ptr<const EmoteMap> &&map);
 
     const QString &seventvUserID() const;
     const QString &seventvEmoteSetID() const;
@@ -243,6 +255,13 @@ public:
     void upsertPersonalSeventvEmotes(
         const QString &userLogin,
         const std::shared_ptr<const EmoteMap> &emoteMap);
+
+    /** Adds a TinyEmotes channel emote to this channel. */
+    void addTinyEmote(const TinyLiveUpdateEmoteUpdateAddMessage &message);
+    /** Updates a TinyEmotes channel emote in this channel. */
+    void updateTinyEmote(const TinyLiveUpdateEmoteUpdateAddMessage &message);
+    /** Removes a TinyEmotes channel emote from this channel. */
+    void removeTinyEmote(const TinyLiveUpdateEmoteRemoveMessage &message);
 
     // Badges
     std::optional<EmotePtr> ffzCustomModBadge() const;
@@ -450,6 +469,7 @@ protected:
     Atomic<std::shared_ptr<const EmoteMap>> bttvEmotes_;
     Atomic<std::shared_ptr<const EmoteMap>> ffzEmotes_;
     Atomic<std::shared_ptr<const EmoteMap>> seventvEmotes_;
+    std::map<QString, Atomic<std::shared_ptr<const EmoteMap>>> tinyEmotes_;
     Atomic<std::optional<EmotePtr>> ffzCustomModBadge_;
     Atomic<std::optional<EmotePtr>> ffzCustomVipBadge_;
 

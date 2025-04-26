@@ -478,6 +478,9 @@ void EmotePopup::reloadEmotes()
         addEmotes(*globalChannel, *getApp()->getSeventvEmotes()->globalEmotes(),
                   "7TV", MessageElementFlag::SevenTVEmote);
     }
+    if (Settings::instance().enableTinyGlobalEmotes) {
+        addEmotes(*globalChannel, *getApp()->getTinyEmotes()->emotes("localhost:8000"), "localhost:8000", MessageElementFlag::TinyEmote);
+    }
 
     // channel
     if (Settings::instance().enableBTTVChannelEmotes)
@@ -494,6 +497,9 @@ void EmotePopup::reloadEmotes()
     {
         addEmotes(*channelChannel, *this->twitchChannel_->seventvEmotes(),
                   "7TV", MessageElementFlag::SevenTVEmote);
+    }
+    if (Settings::instance().enableTinyChannelEmotes) {
+        addEmotes(*channelChannel, *this->twitchChannel_->tinyEmotes("localhost:8000").value(), "localhost:8000", MessageElementFlag::TinyEmote);
     }
 
     // personal
@@ -563,6 +569,7 @@ void EmotePopup::filterTwitchEmotes(std::shared_ptr<Channel> searchChannel,
         filterEmoteMap(searchText, getApp()->getFfzEmotes()->emotes());
     auto seventvGlobalEmotes = filterEmoteMap(
         searchText, getApp()->getSeventvEmotes()->globalEmotes());
+    auto tinyGlobalEmotes = filterEmoteMap(searchText, getApp()->getTinyEmotes()->emotes("localhost:8000"));
 
     // global
     if (!bttvGlobalEmotes.empty())
@@ -580,6 +587,9 @@ void EmotePopup::filterTwitchEmotes(std::shared_ptr<Channel> searchChannel,
         addEmotes(*searchChannel, seventvGlobalEmotes, "7TV (Global)",
                   MessageElementFlag::SevenTVEmote);
     }
+    if (!tinyGlobalEmotes.empty()) {
+        addEmotes(*searchChannel, tinyGlobalEmotes, "localhost:8000 (Global)", MessageElementFlag::TinyEmote);
+    }
 
     if (this->twitchChannel_ == nullptr)
     {
@@ -592,6 +602,8 @@ void EmotePopup::filterTwitchEmotes(std::shared_ptr<Channel> searchChannel,
         filterEmoteMap(searchText, this->twitchChannel_->ffzEmotes());
     auto seventvChannelEmotes =
         filterEmoteMap(searchText, this->twitchChannel_->seventvEmotes());
+    auto tinyChannelEmotes =
+        filterEmoteMap(searchText, this->twitchChannel_->tinyEmotes("localhost:8000").value());
 
     // channel
     if (!bttvChannelEmotes.empty())
@@ -608,6 +620,9 @@ void EmotePopup::filterTwitchEmotes(std::shared_ptr<Channel> searchChannel,
     {
         addEmotes(*searchChannel, seventvChannelEmotes, "7TV (Channel)",
                   MessageElementFlag::SevenTVEmote);
+    }
+    if (!tinyChannelEmotes.empty()) {
+        addEmotes(*searchChannel, tinyChannelEmotes, "localhost:8000 (Channel)", MessageElementFlag::TinyEmote);
     }
 
     for (const auto &map :
