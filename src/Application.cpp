@@ -288,7 +288,6 @@ void Application::initialize(Settings &settings, const Paths &paths)
     this->bttvEmotes->loadEmotes();
     this->ffzEmotes->loadEmotes();
     this->seventvEmotes->loadGlobalEmotes();
-    this->tinyEmotes->loadEmotes();
 
     this->twitch->initialize();
 
@@ -368,11 +367,9 @@ int Application::run()
             this->twitch->reloadAllSevenTVChannelEmotes();
         },
         false);
-    getSettings()->enableTinyChannelEmotes.connect(
-        [this] {
-            this->twitch->reloadAllTinyChannelEmotes();
-        },
-        false);
+    getSettings()->tinyemotesInstances.delayedItemsChanged.connect([this] {
+        this->twitch->reloadAllTinyChannelEmotes();
+    });
 
     return QApplication::exec();
 }

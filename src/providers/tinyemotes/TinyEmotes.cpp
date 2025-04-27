@@ -35,7 +35,7 @@ const QString CHANNEL_HAS_NO_EMOTES("This channel has no %1 channel emotes.");
 ///
 /// %1 being the instance URL
 /// %2 being the emote ID (e.g. 1, 123, 456789)
-constexpr QStringView EMOTE_LINK_FORMAT = u"http://%1/emotes?id=%2";
+constexpr QStringView EMOTE_LINK_FORMAT = u"%1%2/emotes?id=%3";
 
 /// The emote CDN link template.
 ///
@@ -44,7 +44,7 @@ constexpr QStringView EMOTE_LINK_FORMAT = u"http://%1/emotes?id=%2";
 /// %3 being the emote size (e.g. 3x)
 /// %4 being the emote extension (e.g. png, gif, webp)
 constexpr QStringView EMOTE_CDN_FORMAT =
-    u"http://%1/static/userdata/emotes/%2/%3.%4";
+    u"%1%2/static/userdata/emotes/%3/%4.%5";
 
 // TinyEmotes doesn't provide any data on the size, so we assume an emote is 32x32
 constexpr QSize EMOTE_BASE_SIZE(32, 32);
@@ -58,7 +58,13 @@ struct CreateEmoteResult {
 Url getEmoteLinkV3(const QString &instanceUrl, const EmoteId &id,
                    const QString &emoteScale, const QString &ext)
 {
-    return {EMOTE_CDN_FORMAT.arg(instanceUrl, id.string, emoteScale, ext)};
+    QString prefix = "https://";
+    if (instanceUrl.startsWith("http://") || instanceUrl.startsWith("https://"))
+    {
+        prefix = "";
+    }
+    return {
+        EMOTE_CDN_FORMAT.arg(prefix, instanceUrl, id.string, emoteScale, ext)};
 }
 
 EmotePtr cachedOrMake(Emote &&emote, const EmoteId &id)
@@ -103,6 +109,13 @@ std::pair<Outcome, EmoteMap> parseGlobalEmotes(const QString &instanceUrl,
                            .toString();
         }
 
+        QString emoteUrlPrefix = "https://";
+        if (instanceUrl.startsWith("http://") ||
+            instanceUrl.startsWith("https://"))
+        {
+            emoteUrlPrefix = "";
+        }
+
         auto emote = Emote({
             name,
             ImageSet{Image::fromUrl(getEmoteLinkV3(instanceUrl, id, "1x", ext),
@@ -113,7 +126,7 @@ std::pair<Outcome, EmoteMap> parseGlobalEmotes(const QString &instanceUrl,
                                     0.25, EMOTE_BASE_SIZE * 4)},
             Tooltip{name.string + "<br>Global " + instanceUrl +
                     " Emote<br>By: " + uploader},
-            Url{EMOTE_LINK_FORMAT.arg(instanceUrl, id.string)},
+            Url{EMOTE_LINK_FORMAT.arg(emoteUrlPrefix, instanceUrl, id.string)},
         });
 
         emotes[name] = cachedOrMakeEmotePtr(std::move(emote), currentEmotes);
@@ -143,6 +156,11 @@ CreateEmoteResult createEmote(const QString &instanceUrl,
     }
 
     auto ext = jsonEmote.value("ext").toString();
+    QString emoteUrlPrefix = "https://";
+    if (instanceUrl.startsWith("http://") || instanceUrl.startsWith("https://"))
+    {
+        emoteUrlPrefix = "";
+    }
 
     auto emote = Emote({
         name,
@@ -158,7 +176,7 @@ CreateEmoteResult createEmote(const QString &instanceUrl,
                     .arg(name.string)
                     .arg(instanceUrl)
                     .arg(author.string)},
-        Url{EMOTE_LINK_FORMAT.arg(id.string)},
+        Url{EMOTE_LINK_FORMAT.arg(emoteUrlPrefix, instanceUrl, id.string)},
         false,
         id,
     });
@@ -254,40 +272,76 @@ EmoteMap tinyemotes::detail::parseChannelEmotes(
 //
 TinyEmotes::TinyEmotes()
 {
-    this->global_.insert(
-        std::make_pair("localhost:8000", std::make_shared<EmoteMap>()));
-    getSettings()->enableTinyGlobalEmotes.connect(
-        [this] {
-            this->loadEmotes();
-        },
-        this->managedConnections, false);
+    auto instances = getSettings()->tinyemotesInstances.readOnly();
+    for (const auto &instance : *instances)
+    {
+        this->global_.insert(
+            std::make_pair(instance.getUrl(), std::make_shared<EmoteMap>()));
+    }
+
+    getSettings()->tinyemotesInstances.itemRemoved.connect(
+        [this](const auto &instance) {
+            auto instances = getSettings()->tinyemotesInstances.readOnly();
+            int count =
+                std::count_if(instances->begin(), instances->end(),
+                              [&instance](const auto &x) {
+                                  return x.getUrl() == instance.item.getUrl();
+                              });
+
+            if (count <= 1)
+            {
+                auto it = this->global_.find(instance.item.getUrl());
+                this->global_.erase(it);
+            }
+        });
+
+    getSettings()->tinyemotesInstances.itemInserted.connect(
+        [this](const auto &instance) {
+            this->global_.insert(
+                std::make_pair(instance.item.getUrl(), EMPTY_EMOTE_MAP));
+        });
+
+    getSettings()->tinyemotesInstances.delayedItemsChanged.connect([this] {
+        this->loadEmotes();
+    });
 }
 
 std::shared_ptr<const EmoteMap> TinyEmotes::emotes(
     const QString &instanceUrl) const
 {
-    return this->global_.at(instanceUrl).get();
+    auto it = this->global_.find(instanceUrl);
+    if (it == this->global_.end())
+    {
+        return nullptr;
+    }
+    return it->second.get();
 }
 
 std::optional<EmotePtr> TinyEmotes::emote(const QString &instanceUrl,
                                           const EmoteName &name) const
 {
-    auto emotes = this->global_.at(instanceUrl).get();
-    auto it = emotes->find(name);
-
-    if (it == emotes->end())
+    auto it = this->global_.find(instanceUrl);
+    if (it == this->global_.end())
     {
         return std::nullopt;
     }
 
-    return it->second;
+    auto emotes = it->second.get();
+    auto emoteit = emotes->find(name);
+
+    if (emoteit == emotes->end())
+    {
+        return std::nullopt;
+    }
+
+    return emoteit->second;
 }
 
 void TinyEmotes::loadEmotes()
 {
     for (auto it = this->global_.begin(); it != this->global_.end(); ++it)
     {
-        if (!Settings::instance().enableTinyGlobalEmotes)
+        if (!getSettings()->isTinyGlobalEmotesEnabled(it->first))
         {
             this->setEmotes(it->first, EMPTY_EMOTE_MAP);
             continue;
@@ -307,8 +361,14 @@ void TinyEmotes::loadEmotes()
 
         auto url = it->first;
         auto emotes = it->second.get();
+        QString urlPrefix = "https://";
+        if (url.startsWith("http://") || url.startsWith("https://"))
+        {
+            urlPrefix = "";
+        }
 
-        NetworkRequest(QString(tinyemotesGlobalEmotesApiUrl).arg(it->first))
+        NetworkRequest(
+            QString(tinyemotesGlobalEmotesApiUrl).arg(urlPrefix).arg(url))
             .timeout(30000)
             .header("Accept", "application/json")
             .onSuccess([this, url, emotes](auto result) {
@@ -320,10 +380,11 @@ void TinyEmotes::loadEmotes()
                                              std::move(pair.second)));
                 }
             })
-            .onError([&it](auto result) {
+            .onError([this, url](auto result) {
                 qCWarning(chatterinoTinyemotes)
-                    << "Failed to fetch global " << it->first << " emotes. "
+                    << "Failed to fetch global " << url << " emotes. "
                     << result.formatError();
+                this->setEmotes(url, EMPTY_EMOTE_MAP);
             })
             .execute();
     }
@@ -350,13 +411,20 @@ void TinyEmotes::loadChannel(const QString &instanceUrl,
                              std::function<void(EmoteMap &&)> callback,
                              bool manualRefresh, bool cacheHit)
 {
-    NetworkRequest(
-        QString(tinyemotesUserApiUrl).arg(instanceUrl).arg(channelId))
+    QString urlPrefix = "https://";
+    if (instanceUrl.startsWith("http://") || instanceUrl.startsWith("https://"))
+    {
+        urlPrefix = "";
+    }
+
+    NetworkRequest(QString(tinyemotesUserApiUrl)
+                       .arg(urlPrefix)
+                       .arg(instanceUrl)
+                       .arg(channelId))
         .header("Accept", "application/json")
         .timeout(20000)
-        .onSuccess([callback = std::move(callback), channel, channelId,
-                    channelDisplayName, manualRefresh,
-                    &instanceUrl](auto result) {
+        .onSuccess([callback, channel, channelId, channelDisplayName,
+                    manualRefresh, &instanceUrl](auto result) {
             auto emotes = parseChannelEmotes(instanceUrl, result.parseJson(),
                                              channelDisplayName);
             bool hasEmotes = !emotes.empty();

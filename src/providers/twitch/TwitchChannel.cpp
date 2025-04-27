@@ -114,7 +114,34 @@ TwitchChannel::TwitchChannel(const QString &name)
 {
     qCDebug(chatterinoTwitch) << "[TwitchChannel" << name << "] Opened";
 
-    this->tinyEmotes_.emplace("localhost:8000", std::make_shared<EmoteMap>());
+    auto instances = getSettings()->tinyemotesInstances.readOnly();
+    for (const auto &instance : *instances)
+    {
+        this->tinyEmotes_.emplace(instance.getUrl(),
+                                  std::make_shared<EmoteMap>());
+    }
+
+    getSettings()->tinyemotesInstances.itemRemoved.connect(
+        [this](const auto &instance) {
+            auto instances = getSettings()->tinyemotesInstances.readOnly();
+            int count =
+                std::count_if(instances->begin(), instances->end(),
+                              [&instance](const auto &x) {
+                                  return x.getUrl() == instance.item.getUrl();
+                              });
+
+            if (count <= 1)
+            {
+                auto it = this->tinyEmotes_.find(instance.item.getUrl());
+                this->tinyEmotes_.erase(it);
+            }
+        });
+
+    getSettings()->tinyemotesInstances.itemInserted.connect(
+        [this](const auto &instance) {
+            this->tinyEmotes_.insert(std::make_pair(
+                instance.item.getUrl(), std::make_shared<EmoteMap>()));
+        });
 
     this->bSignals_.emplace_back(
         getApp()->getAccounts()->twitch.currentUserChanged.connect([this] {
@@ -443,32 +470,38 @@ void TwitchChannel::refreshTinyChannelEmotes(bool manualRefresh)
 {
     for (auto &url : this->tinyEmotes_)
     {
-        if (!Settings::instance().enableTinyChannelEmotes)
+        if (!Settings::instance().isTinyChannelEmotesEnabled(url.first))
         {
             url.second.set(EMPTY_EMOTE_MAP);
             continue;
         }
 
+        if (this->roomId().isEmpty()) {
+            continue;
+        }
+
+        auto urlLink = url.first;
+
         bool cacheHit = readProviderEmotesCache(
             this->roomId(), url.first,
-            [this, &url, weak = weakOf<Channel>(this)](auto jsonDoc) {
+            [this, urlLink, weak = weakOf<Channel>(this)](auto jsonDoc) {
                 if (auto shared = weak.lock())
                 {
                     auto emoteMap = tinyemotes::detail::parseChannelEmotes(
-                        url.first, jsonDoc.object(), this->getLocalizedName());
+                        urlLink, jsonDoc.object(), this->getLocalizedName());
                     this->setTinyEmotes(
-                        url.first, std::make_shared<const EmoteMap>(emoteMap));
+                        urlLink, std::make_shared<const EmoteMap>(emoteMap));
                 }
             });
 
         TinyEmotes::loadChannel(
             url.first, weakOf<Channel>(this), this->roomId(),
             this->getLocalizedName(),
-            [this, &url, weak = weakOf<Channel>(this)](auto &&emoteMap) {
+            [this, urlLink, weak = weakOf<Channel>(this)](auto &&emoteMap) {
                 if (auto shared = weak.lock())
                 {
                     this->setTinyEmotes(
-                        url.first, std::make_shared<const EmoteMap>(emoteMap));
+                        urlLink, std::make_shared<const EmoteMap>(emoteMap));
                 }
             },
             manualRefresh, cacheHit);

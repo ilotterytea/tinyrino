@@ -275,6 +275,11 @@ set(SOURCE_FILES
         controllers/userdata/UserDataController.hpp
         controllers/userdata/UserData.hpp
 
+        controllers/tinyemotesinstances/TinyemotesInstance.cpp
+        controllers/tinyemotesinstances/TinyemotesInstance.hpp
+        controllers/tinyemotesinstances/TinyemotesInstanceModel.cpp
+        controllers/tinyemotesinstances/TinyemotesInstanceModel.hpp
+
         debug/Benchmark.cpp
         debug/Benchmark.hpp
 
@@ -772,6 +777,8 @@ set(SOURCE_FILES
         widgets/settingspages/SettingsPage.hpp
         widgets/settingspages/SettingWidget.cpp
         widgets/settingspages/SettingWidget.hpp
+        widgets/settingspages/TinyrinoPage.hpp
+        widgets/settingspages/TinyrinoPage.cpp
 
         widgets/splits/ClosedSplits.cpp
         widgets/splits/ClosedSplits.hpp

@@ -14,6 +14,7 @@
 #include "controllers/moderationactions/ModerationAction.hpp"
 #include "controllers/nicknames/Nickname.hpp"
 #include "controllers/sound/ISoundController.hpp"
+#include "controllers/tinyemotesinstances/TinyemotesInstance.hpp"
 #include "singletons/Toasts.hpp"
 #include "util/RapidJsonSerializeQString.hpp"
 #include "widgets/Notebook.hpp"
@@ -368,9 +369,6 @@ public:
                                                true};
     BoolSetting enableSevenTVEventAPI = {"/emotes/seventv/eventapi", true};
     BoolSetting sendSevenTVActivity = {"/emotes/seventv/sendActivity", true};
-
-    BoolSetting enableTinyGlobalEmotes = {"/emotes/tiny/global", true};
-    BoolSetting enableTinyChannelEmotes = {"/emotes/tiny/channel", true};
 
     BoolSetting allowAvifImages = {"/emotes/allowAvif", true};
 
@@ -739,6 +737,8 @@ private:
         {"/moderation/actions"};
     ChatterinoSetting<std::vector<ChannelLog>> loggedChannelsSetting = {
         "/logging/channels"};
+    ChatterinoSetting<std::vector<TinyemotesInstance>>
+        tinyemotesInstancesSetting = {"/tinyemotes/instances"};
     SignalVector<QString> mutedChannels;
 
 public:
@@ -751,11 +751,14 @@ public:
     SignalVector<Nickname> nicknames;
     SignalVector<ModerationAction> moderationActions;
     SignalVector<ChannelLog> loggedChannels;
+    SignalVector<TinyemotesInstance> tinyemotesInstances;
 
     bool isHighlightedUser(const QString &username);
     bool isBlacklistedUser(const QString &username);
     bool isMutedChannel(const QString &channelName);
     bool toggleMutedChannel(const QString &channelName);
+    bool isTinyChannelEmotesEnabled(const QString &instanceUrl);
+    bool isTinyGlobalEmotesEnabled(const QString &instanceUrl);
     std::optional<QString> matchNickname(const QString &username);
     void mute(const QString &channelName);
     void unmute(const QString &channelName);

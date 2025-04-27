@@ -440,18 +440,25 @@ std::tuple<std::optional<EmotePtr>, MessageElementFlags, bool> parseEmote(
     const auto *globalBttvEmotes = getApp()->getBttvEmotes();
     const auto *globalSeventvEmotes = getApp()->getSeventvEmotes();
     const auto *globalTinyEmotes = getApp()->getTinyEmotes();
+    const auto instances = getSettings()->tinyemotesInstances.readOnly();
 
     std::optional<EmotePtr> emote{};
 
     if (twitchChannel != nullptr)
     {
-        emote = twitchChannel->tinyEmote("localhost:8000", name);
-        if (emote) {
-            return {
-                emote,
-                MessageElementFlag::TinyEmote,
-                false
-            };
+        for (const auto &instance : *instances) {
+            if (!instance.isChannelEmotesEnabled()) {
+                continue;
+            }
+
+            emote = twitchChannel->tinyEmote(instance.getUrl(), name);
+            if (emote) {
+                return {
+                    emote,
+                    MessageElementFlag::TinyEmote,
+                    false
+                };
+            }
         }
 
         // Check for channel emotes
@@ -498,14 +505,19 @@ std::tuple<std::optional<EmotePtr>, MessageElementFlags, bool> parseEmote(
     }
 
     // Check for global emotes
+    for (const auto &instance : *instances) {
+        if (!instance.isGlobalEmotesEnabled()) {
+            continue;
+        }
 
-    emote = globalTinyEmotes->emote("localhost:8000", name);
-    if (emote) {
-        return {
-            emote,
-            MessageElementFlag::TinyEmote,
-            false
-        };
+        emote = globalTinyEmotes->emote(instance.getUrl(), name);
+        if (emote) {
+            return {
+                emote,
+                MessageElementFlag::TinyEmote,
+                false
+            };
+        }
     }
 
     emote = globalFfzEmotes->emote(name);

@@ -107,6 +107,36 @@ std::optional<QString> Settings::matchNickname(const QString &usernameText)
     return std::nullopt;
 }
 
+bool Settings::isTinyChannelEmotesEnabled(const QString &instanceUrl)
+{
+    auto instances = this->tinyemotesInstances.readOnly();
+
+    for (const auto &instance : *instances)
+    {
+        if (instance.getUrl() == instanceUrl)
+        {
+            return instance.isChannelEmotesEnabled();
+        }
+    }
+
+    return false;
+}
+
+bool Settings::isTinyGlobalEmotesEnabled(const QString &instanceUrl)
+{
+    auto instances = this->tinyemotesInstances.readOnly();
+
+    for (const auto &instance : *instances)
+    {
+        if (instance.getUrl() == instanceUrl)
+        {
+            return instance.isGlobalEmotesEnabled();
+        }
+    }
+
+    return false;
+}
+
 void Settings::mute(const QString &channelName)
 {
     if (!this->isMutedChannel(channelName))
@@ -180,6 +210,8 @@ Settings::Settings(const Args &args, const QString &settingsDirectory)
                            this->moderationActions);
     initializeSignalVector(this->signalHolder, this->loggedChannelsSetting,
                            this->loggedChannels);
+    initializeSignalVector(this->signalHolder, this->tinyemotesInstancesSetting,
+                           this->tinyemotesInstances);
 
     instance_ = this;
 
