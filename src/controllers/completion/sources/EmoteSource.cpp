@@ -12,6 +12,7 @@
 #include "providers/twitch/TwitchChannel.hpp"
 #include "providers/twitch/TwitchIrcServer.hpp"
 #include "singletons/Emotes.hpp"
+#include "singletons/Settings.hpp"
 
 namespace chatterino::completion {
 
@@ -96,6 +97,8 @@ void EmoteSource::initializeFromChannel(const Channel *channel)
     // returns true also for special Twitch channels (/live, /mentions, /whispers, etc.)
     if (channel->isTwitchChannel())
     {
+        auto instances = getSettings()->tinyemotesInstances.readOnly();
+
         if (tc)
         {
             if (auto twitch = tc->localTwitchEmotes())
@@ -114,6 +117,21 @@ void EmoteSource::initializeFromChannel(const Channel *channel)
             }
 
             // TODO extract "Channel {BetterTTV,7TV,FrankerFaceZ}" text into a #define.
+            for (const auto &instance : *instances) {
+                if (!instance.isChannelEmotesEnabled()) {
+                    continue;
+                }
+
+                auto tinyOptional = tc->tinyEmotes(instance.getUrl());
+                if (!tinyOptional.has_value()) {
+                    continue;
+                }
+
+                if (auto tiny = tinyOptional.value()) {
+                    addEmotes(emotes, *tiny, "Channel " + instance.getUrl());
+                }
+            }
+
             if (auto bttv = tc->bttvEmotes())
             {
                 addEmotes(emotes, *bttv, "Channel BetterTTV");
@@ -128,6 +146,15 @@ void EmoteSource::initializeFromChannel(const Channel *channel)
             }
         }
 
+        for (const auto &instance : *instances) {
+            if (!instance.isGlobalEmotesEnabled()) {
+                continue;
+            }
+
+            if (auto tinyG = app->getTinyEmotes()->emotes(instance.getUrl())) {
+                addEmotes(emotes, *tinyG, "Global " + instance.getUrl());
+            }
+        }
         if (auto bttvG = app->getBttvEmotes()->emotes())
         {
             addEmotes(emotes, *bttvG, "Global BetterTTV");
