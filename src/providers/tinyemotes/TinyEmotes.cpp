@@ -93,17 +93,16 @@ std::pair<Outcome, EmoteMap> parseGlobalEmotes(const QString &instanceUrl,
 
     for (auto jsonEmote : jsonEmotes)
     {
-        auto id =
-            EmoteId{QString::number(jsonEmote.toObject().value("id").toInt())};
-        auto name = EmoteName{jsonEmote.toObject().value("code").toString()};
-        auto ext = jsonEmote.toObject().value("ext").toString();
+        auto jsonObj = jsonEmote.toObject();
+        auto id = EmoteId{QString::number(jsonObj.value("id").toInt())};
+        auto name = EmoteName{jsonObj.value("code").toString()};
+        auto ext = jsonObj.value("ext").toString();
 
         QString uploader = "anonymous*";
 
-        if (!jsonEmote.toObject().value("uploaded_by").isNull())
+        if (!jsonObj.value("uploaded_by").isNull())
         {
-            uploader = jsonEmote.toObject()
-                           .value("uploaded_by")
+            uploader = jsonObj.value("uploaded_by")
                            .toObject()
                            .value("username")
                            .toString();
@@ -116,6 +115,13 @@ std::pair<Outcome, EmoteMap> parseGlobalEmotes(const QString &instanceUrl,
             emoteUrlPrefix = "";
         }
 
+        QString aliasName = "";
+        if (!jsonObj.value("original_code").isNull())
+        {
+            aliasName =
+                "<br>Alias of " + jsonObj.value("original_code").toString();
+        }
+
         auto emote = Emote({
             name,
             ImageSet{Image::fromUrl(getEmoteLinkV3(instanceUrl, id, "1x", ext),
@@ -124,8 +130,8 @@ std::pair<Outcome, EmoteMap> parseGlobalEmotes(const QString &instanceUrl,
                                     0.5, EMOTE_BASE_SIZE * 2),
                      Image::fromUrl(getEmoteLinkV3(instanceUrl, id, "3x", ext),
                                     0.25, EMOTE_BASE_SIZE * 4)},
-            Tooltip{name.string + "<br>Global " + instanceUrl +
-                    " Emote<br>By: " + uploader},
+            Tooltip{name.string + aliasName + "<br>Global " + instanceUrl +
+                    " Emote<br>By : " + uploader},
             Url{EMOTE_LINK_FORMAT.arg(emoteUrlPrefix, instanceUrl, id.string)},
         });
 
@@ -162,6 +168,13 @@ CreateEmoteResult createEmote(const QString &instanceUrl,
         emoteUrlPrefix = "";
     }
 
+    QString aliasName = "";
+    if (!jsonEmote.value("original_code").isNull())
+    {
+        aliasName =
+            "<br>Alias of " + jsonEmote.value("original_code").toString();
+    }
+
     auto emote = Emote({
         name,
         ImageSet{
@@ -172,7 +185,7 @@ CreateEmoteResult createEmote(const QString &instanceUrl,
             Image::fromUrl(getEmoteLinkV3(instanceUrl, id, "3x", ext), 0.25,
                            EMOTE_BASE_SIZE * 4),
         },
-        Tooltip{QString("%1<br>Channel %2 Emote<br>By: %3")
+        Tooltip{QString("%1" + aliasName + "<br>Channel %2 Emote<br>By: %3")
                     .arg(name.string)
                     .arg(instanceUrl)
                     .arg(author.string)},
