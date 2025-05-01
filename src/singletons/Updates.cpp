@@ -310,14 +310,17 @@ void Updates::checkForUpdates()
         return;
     }
 
-    // See https://github.com/SevenTV/SevenTV/issues/48#issue-2193272289
-    // for the proposed structure of the response.
     auto onSuccess = [this](const NetworkResult &result) {
-        const auto object = result.parseJson();
-        if (object.empty())
+        const auto json = result.parseJson();
+        if (json.empty())
         {
-            return;  // this should only happen on the v4 url as it's not really mapped
+            return;
         }
+        if (json["data"].isNull())
+        {
+            return;
+        }
+        const auto object = json["data"].toObject();
 
         /// Version available on every platform
         auto version = object["version"];
@@ -401,46 +404,16 @@ void Updates::checkForUpdates()
         }
     };
 
-    // We're trying v3, ~~and v4~~ to get updates.
-    // The first successful one will be used
-    auto apiVersion = std::make_shared<uint8_t>(3);
-    constexpr auto maxApiVersion =
-        3;  // don't try v4 yet (we don't know the API scheme yet)
-    auto fmtUrl = [apiVersion]() -> QString {
-        return u"https://7tv.io/v" % QString::number(*apiVersion) %
-               "/chatterino/version/" % CHATTERINO_OS % "/" % currentBranch();
-    };
-
-    auto onError = std::make_shared<std::function<void(NetworkResult)>>();
-    // We need to avoid cyclic ownership, so we pass onError as a weak pointer.
-    // During the request, it's kept alive by the finally handler, which will
-    // always be called after onError and onSuccess.
-    auto makeRequest = [onSuccess,
-                        onErrorWeak = std::weak_ptr(onError)](auto url) {
-        auto onError = onErrorWeak.lock();
-        if (!onError)
-        {
-            return;
-        }
+    auto makeRequest = [onSuccess](auto url) {
         qCDebug(chatterinoUpdate) << "Requesting updates from" << url;
         NetworkRequest(url)
             .timeout(60000)
             .followRedirects(true)
             .onSuccess(onSuccess)
-            .onError(*onError)
-            .finally([onError]() {})
             .execute();
     };
 
-    *onError = [apiVersion, fmtUrl, makeRequest](const auto &) mutable {
-        if (*apiVersion >= maxApiVersion)
-        {
-            return;  // nothing returned a response, we're done
-        }
-        (*apiVersion)++;
-        makeRequest(fmtUrl());
-    };
-    makeRequest(fmtUrl());
+    makeRequest(QString("https://assets.ilotterytea.kz/tinyrino/version.php?os=%1&branch=%2").arg(CHATTERINO_OS).arg(currentBranch()));
 
     this->setStatus_(Searching);
 #endif
