@@ -1,43 +1,31 @@
-![chatterinoLogo](https://user-images.githubusercontent.com/41973452/272541622-52457e89-5f16-4c83-93e7-91866c25b606.png)
-Chatterino7 [![GitHub Actions Build (Windows, Ubuntu, MacOS)](https://github.com/seventv/chatterino7/actions/workflows/build.yml/badge.svg?branch=chatterino7)](https://github.com/SevenTV/chatterino7/actions?query=workflow%3ABuild+branch%3Achatterino7) [![Chocolatey Package](https://img.shields.io/chocolatey/v/chatterino7?include_prereleases)](https://chocolatey.org/packages/chatterino7)
+![chatterinoLogo](/icon.png) Tinyrino [![GitHub Actions Build (Windows, Ubuntu, MacOS)](https://github.com/ilotterytea/tinyrino/actions/workflows/build.yml/badge.svg?branch=tinyrino)](https://github.com/ilotterytea/tinyrino/actions?query=workflow%3ABuild+branch%3Atinyrino)
 ============
 
-Chatterino7 is a fork of Chatterino 2. This fork mainly contains features that aren't accepted into Chatterino 2, most notably 7TV subscriber features.
+Tinyrino is a fork of Chatterino7 (which is a fork of Chatterino 2). This fork supports [TinyEmotes](https://github.com/ilotterytea/tinyemotes), a software that allows you to host your emotes on your own instances.
 
-### Features of Chatterino7
+### Features of Tinyrino
 
-- 7TV Name Paints
-
-- 7TV Personal Emotes
-
-- 7TV Animated Profile Avatars
-
-- 4x Images (7TV and FFZ)
+- Multiple TinyEmotes instances.
 
 ### Screenshots
 
-![Example of Personal Emotes](https://user-images.githubusercontent.com/27637025/227032811-837c56eb-7724-431b-b00e-b944c9289dff.png)
-![Example of Paints](https://user-images.githubusercontent.com/27637025/227034147-cb1fcd76-dbae-4878-9551-96ffa64dd1a9.png)
+> TODO
 
 ### Downloads
 
-**Stable builds** can be downloaded from the [releases section](https://github.com/SevenTV/chatterino7/releases/latest).
+**Stable builds** can be downloaded from the [releases section](https://github.com/ilotterytea/tinyrino/releases/latest).
 
-To test new features, you can download the **nighly build** [here](https://github.com/SevenTV/chatterino7/releases/tag/nightly-build).
+To test new features, you can download the **nightly build** [here](https://github.com/ilotterytea/tinyrino/releases/tag/nightly-build).
 
-Windows users can install Chatterino7 [from Chocolatey](https://chocolatey.org/packages/chatterino7).
+<!--Windows users can install Chatterino7 [from Chocolatey](https://chocolatey.org/packages/chatterino7).-->
 
 ### Issues
 
-If you have issues such as crashes or weird behaviour regarding 7TV features, report them [in the issue-section](https://github.com/SevenTV/chatterino7/issues). If you have issues with other features, please report them [in the upstream issue-section](https://github.com/Chatterino/chatterino2/issues).
-
-### Discord
-
-If you don't have a GitHub account and want to report issues or want to join the community you can join the official 7TV Discord using the link here: <https://discord.com/invite/7tv>.
+If you have issues such as crashes or weird behaviour regarding TinyEmotes features, report them [in the issue-section](https://github.com/ilotterytea/tinyrino/issues). If you have issues with other features, please report them [in the upstream issue-section](https://github.com/Chatterino/chatterino2/issues).
 
 ### AVIF Support
 
-When building Chatterino 7, you might not have access to a static build of `libavif`. In that case, you can define `CHATTERINO_NO_AVIF_PLUGIN` in CMake. If you have `qavif.so` from [kimageformats](https://invent.kde.org/frameworks/kimageformats) installed on your system, Chatterino will pick it up and use AVIF images.
+When building Tinyrino, you might not have access to a static build of `libavif`. In that case, you can define `CHATTERINO_NO_AVIF_PLUGIN` in CMake. If you have `qavif.so` from [kimageformats](https://invent.kde.org/frameworks/kimageformats) installed on your system, Chatterino will pick it up and use AVIF images.
 
 ## Original Chatterino 2 Readme
 
@@ -62,14 +50,14 @@ If you still receive an error about `MSVCR120.dll missing`, then you should inst
 To get source code with required submodules run:
 
 ```shell
-git clone --recurse-submodules https://github.com/Chatterino/chatterino2.git
+git clone --recurse-submodules https://github.com/ilotterytea/tinyrino.git
 ```
 
 or
 
 ```shell
-git clone https://github.com/Chatterino/chatterino2.git
-cd chatterino2
+git clone https://github.com/ilotterytea/tinyrino.git
+cd tinyrino
 git submodule update --init --recursive
 ```
 

@@ -230,7 +230,7 @@ void Application::initialize(Settings &settings, const Paths &paths)
         if (Version::instance().isRunningInRosetta())
         {
             auto *armBox =
-                new QMessageBox(QMessageBox::Information, "Chatterino 7",
+                new QMessageBox(QMessageBox::Information, "Tinyrino",
                                 "It looks like you're running the x86-64 "
                                 "version of Chatterio on "
                                 "Apple Silicon (ARM) using Rosetta2 emulation. "
@@ -247,12 +247,12 @@ void Application::initialize(Settings &settings, const Paths &paths)
                     if (Modes::instance().isNightly)
                     {
                         return QStringLiteral(
-                            "https://github.com/SevenTV/chatterino7/"
+                            "https://github.com/ilotterytea/tinyrino/"
                             "releases/tag/nightly-build");
                     }
 
                     return QStringLiteral(
-                               "https://github.com/SevenTV/chatterino7/"
+                               "https://github.com/ilotterytea/tinyrino/"
                                "releases/tag/v") +
                            Version::instance().version();
                 }();
@@ -262,7 +262,7 @@ void Application::initialize(Settings &settings, const Paths &paths)
         }
 #endif
 
-        auto *box = new QMessageBox(QMessageBox::Information, "Chatterino 7",
+        auto *box = new QMessageBox(QMessageBox::Information, "Tinyrino",
                                     "Show changelog?",
                                     QMessageBox::Yes | QMessageBox::No);
         box->setAttribute(Qt::WA_DeleteOnClose);

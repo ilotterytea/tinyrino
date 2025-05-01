@@ -68,7 +68,7 @@ if len(unreleased_lines) > 5:
 
 seventv_changes = get_unreleased_lines("../CHANGELOG.c7.md")
 if len(seventv_changes) > 0:
-    print("<details><summary>Chatterino7 Changes</summary>\n")
+    print("<details><summary>Tinyrino Changes</summary>\n")
     for _, line in seventv_changes:
         print(line)
     print("</details>")

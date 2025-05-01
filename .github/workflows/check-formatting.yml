@@ -4,7 +4,7 @@ name: Check formatting
 on:
   push:
     branches:
-      - chatterino7
+      - tinyrino
   pull_request:
   merge_group:
 

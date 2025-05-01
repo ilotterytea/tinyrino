@@ -284,9 +284,9 @@ void Toasts::ensureInitialized()
     this->initialized_ = true;
 
     auto *instance = WinToast::instance();
-    instance->setAppName(L"Chatterino7");
+    instance->setAppName(L"Tinyrino");
     instance->setAppUserModelId(
-        WinToast::configureAUMI(L"SevenTV", L"Chatterino7", L"", L""));
+        WinToast::configureAUMI(L"SevenTV", L"Tinyrino", L"", L""));
     if (!getSettings()->createShortcutForToasts)
     {
         instance->setShortcutPolicy(WinToast::SHORTCUT_POLICY_IGNORE);
