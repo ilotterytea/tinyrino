@@ -44,7 +44,7 @@ constexpr QStringView EMOTE_LINK_FORMAT = u"%1%2/emotes?id=%3";
 /// %3 being the emote size (e.g. 3x)
 /// %4 being the emote extension (e.g. png, gif, webp)
 constexpr QStringView EMOTE_CDN_FORMAT =
-    u"%1%2/static/userdata/emotes/%3/%4.%5";
+    u"%1%2/static/userdata/emotes/%3/%4.webp";
 
 // TinyEmotes doesn't provide any data on the size, so we assume an emote is 32x32
 constexpr QSize EMOTE_BASE_SIZE(32, 32);
@@ -56,15 +56,14 @@ struct CreateEmoteResult {
 };
 
 Url getEmoteLinkV3(const QString &instanceUrl, const EmoteId &id,
-                   const QString &emoteScale, const QString &ext)
+                   const QString &emoteScale)
 {
     QString prefix = "https://";
     if (instanceUrl.startsWith("http://") || instanceUrl.startsWith("https://"))
     {
         prefix = "";
     }
-    return {
-        EMOTE_CDN_FORMAT.arg(prefix, instanceUrl, id.string, emoteScale, ext)};
+    return {EMOTE_CDN_FORMAT.arg(prefix, instanceUrl, id.string, emoteScale)};
 }
 
 EmotePtr cachedOrMake(Emote &&emote, const EmoteId &id)
@@ -96,7 +95,6 @@ std::pair<Outcome, EmoteMap> parseGlobalEmotes(const QString &instanceUrl,
         auto jsonObj = jsonEmote.toObject();
         auto id = EmoteId{jsonObj.value("id").toString()};
         auto name = EmoteName{jsonObj.value("code").toString()};
-        auto ext = jsonObj.value("ext").toString();
 
         QString uploader = "anonymous*";
 
@@ -124,12 +122,12 @@ std::pair<Outcome, EmoteMap> parseGlobalEmotes(const QString &instanceUrl,
 
         auto emote = Emote({
             name,
-            ImageSet{Image::fromUrl(getEmoteLinkV3(instanceUrl, id, "1x", ext),
-                                    1, EMOTE_BASE_SIZE),
-                     Image::fromUrl(getEmoteLinkV3(instanceUrl, id, "2x", ext),
-                                    0.5, EMOTE_BASE_SIZE * 2),
-                     Image::fromUrl(getEmoteLinkV3(instanceUrl, id, "3x", ext),
-                                    0.25, EMOTE_BASE_SIZE * 4)},
+            ImageSet{Image::fromUrl(getEmoteLinkV3(instanceUrl, id, "1x"), 1,
+                                    EMOTE_BASE_SIZE),
+                     Image::fromUrl(getEmoteLinkV3(instanceUrl, id, "2x"), 0.5,
+                                    EMOTE_BASE_SIZE * 2),
+                     Image::fromUrl(getEmoteLinkV3(instanceUrl, id, "3x"), 0.25,
+                                    EMOTE_BASE_SIZE * 4)},
             Tooltip{name.string + aliasName + "<br>Global " + instanceUrl +
                     " Emote<br>By : " + uploader},
             Url{EMOTE_LINK_FORMAT.arg(emoteUrlPrefix, instanceUrl, id.string)},
@@ -161,7 +159,6 @@ CreateEmoteResult createEmote(const QString &instanceUrl,
                                  .toString()};
     }
 
-    auto ext = jsonEmote.value("ext").toString();
     QString emoteUrlPrefix = "https://";
     if (instanceUrl.startsWith("http://") || instanceUrl.startsWith("https://"))
     {
@@ -178,11 +175,11 @@ CreateEmoteResult createEmote(const QString &instanceUrl,
     auto emote = Emote({
         name,
         ImageSet{
-            Image::fromUrl(getEmoteLinkV3(instanceUrl, id, "1x", ext), 1,
+            Image::fromUrl(getEmoteLinkV3(instanceUrl, id, "1x"), 1,
                            EMOTE_BASE_SIZE),
-            Image::fromUrl(getEmoteLinkV3(instanceUrl, id, "2x", ext), 0.5,
+            Image::fromUrl(getEmoteLinkV3(instanceUrl, id, "2x"), 0.5,
                            EMOTE_BASE_SIZE * 2),
-            Image::fromUrl(getEmoteLinkV3(instanceUrl, id, "3x", ext), 0.25,
+            Image::fromUrl(getEmoteLinkV3(instanceUrl, id, "3x"), 0.25,
                            EMOTE_BASE_SIZE * 4),
         },
         Tooltip{QString("%1" + aliasName + "<br>Channel %2 Emote<br>By: %3")
