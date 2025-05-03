@@ -94,7 +94,7 @@ std::pair<Outcome, EmoteMap> parseGlobalEmotes(const QString &instanceUrl,
     for (auto jsonEmote : jsonEmotes)
     {
         auto jsonObj = jsonEmote.toObject();
-        auto id = EmoteId{QString::number(jsonObj.value("id").toInt())};
+        auto id = EmoteId{jsonObj.value("id").toString()};
         auto name = EmoteName{jsonObj.value("code").toString()};
         auto ext = jsonObj.value("ext").toString();
 
@@ -145,7 +145,7 @@ CreateEmoteResult createEmote(const QString &instanceUrl,
                               const QString &channelDisplayName,
                               const QJsonObject &jsonEmote)
 {
-    auto id = EmoteId{QString::number(jsonEmote.value("id").toInt())};
+    auto id = EmoteId{jsonEmote.value("id").toString()};
     auto name = EmoteName{jsonEmote.value("code").toString()};
     EmoteAuthor author;
 
