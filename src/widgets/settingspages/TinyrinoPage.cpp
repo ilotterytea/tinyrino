@@ -21,11 +21,14 @@ TinyrinoPage::TinyrinoPage()
 
     auto instancesTab = tabs.appendTab(new QVBoxLayout, "TinyEmotes instances");
     {
-        instancesTab.emplace<QLabel>(""
-                                    "Tinyrino allows you to use emotes "
-                                    "from different TinyEmotes instances.\nYou can add an existing "
-                                    "instance here or self-host your own!");
-        auto linkLabel = instancesTab.emplace<QLabel>("<a href='https://github.com/ilotterytea/tinyemotes' style='color:#99f'>More info...</a>");
+        instancesTab.emplace<QLabel>(
+            ""
+            "Tinyrino allows you to use emotes "
+            "from different TinyEmotes instances.\nYou can add an existing "
+            "instance here or self-host your own!");
+        auto linkLabel = instancesTab.emplace<QLabel>(
+            "<a href='https://github.com/ilotterytea/tinyemotes' "
+            "style='color:#99f'>More info...</a>");
         linkLabel->setOpenExternalLinks(true);
 
         EditableModelView *view =
@@ -36,7 +39,8 @@ TinyrinoPage::TinyrinoPage()
                 .getElement();
         this->view_ = view;
 
-        view->setTitles({"Base URL", "Global emotes", "Channel emotes"});
+        view->setTitles(
+            {"Base URL", "Global emotes", "Channel emotes", "Avatars"});
         view->getTableView()->horizontalHeader()->setSectionResizeMode(
             QHeaderView::Interactive);
         view->getTableView()->horizontalHeader()->setSectionResizeMode(
@@ -46,12 +50,13 @@ TinyrinoPage::TinyrinoPage()
             view->getTableView()->resizeColumnsToContents();
             view->getTableView()->setColumnWidth(1, 125);
             view->getTableView()->setColumnWidth(2, 125);
+            view->getTableView()->setColumnWidth(3, 110);
         });
 
         // We can safely ignore this signal connection since we own the view
         std::ignore = view->addButtonPressed.connect([] {
             getSettings()->tinyemotesInstances.append(
-                TinyemotesInstance("alright.party", true, true));
+                TinyemotesInstance("alright.party", true, true, true));
         });
     }
 }

@@ -50,6 +50,9 @@
 #include <QPointer>
 #include <QStringBuilder>
 
+#include <algorithm>
+#include <utility>
+
 namespace {
 
 constexpr QStringView TEXT_FOLLOWERS = u"Followers: %1";
@@ -367,23 +370,57 @@ UserInfoPopup::UserInfoPopup(bool closeAutomatically, Split *split)
         switchAv->hide();
         QObject::connect(
             switchAv.getElement(), &EffectLabel2::leftClicked, [this] {
-                if (!this->seventvAvatar_)
+                if (!this->seventvAvatar_ && !this->tinyAvatar_)
                 {
                     this->ui_.switchAvatars->hide();
                     return;
                 }
-                this->isTwitchAvatarShown_ = !this->isTwitchAvatarShown_;
-                if (this->isTwitchAvatarShown_)
+
+                this->currentShownAvatar_++;
+                if (!this->seventvAvatar_ && this->currentShownAvatar_ == 1)
                 {
-                    this->seventvAvatar_->stop();
-                    this->ui_.avatarButton->setPixmap(this->avatarPixmap_);
-                    this->ui_.switchAvatars->getLabel().setText("Show 7TV");
+                    this->currentShownAvatar_ = 2;
                 }
-                else
+
+                if (this->currentShownAvatar_ > 2 ||
+                    (!this->tinyAvatar_ && this->currentShownAvatar_ > 1))
+                {
+                    this->currentShownAvatar_ = 0;
+                }
+
+                if (this->currentShownAvatar_ == 0)
+                {
+                    if (this->tinyAvatar_)
+                    {
+                        this->tinyAvatar_->stop();
+                        this->ui_.switchAvatars->getLabel().setText(
+                            "Show TinyEmotes");
+                    }
+                    if (this->seventvAvatar_)
+                    {
+                        this->seventvAvatar_->stop();
+                        this->ui_.switchAvatars->getLabel().setText("Show 7TV");
+                    }
+                    this->ui_.avatarButton->setPixmap(this->avatarPixmap_);
+                }
+                else if (this->currentShownAvatar_ == 1)
                 {
                     this->ui_.avatarButton->setPixmap(
                         this->seventvAvatar_->currentPixmap());
                     this->seventvAvatar_->start();
+
+                    this->ui_.switchAvatars->getLabel().setText(
+                        this->tinyAvatar_ ? "Show TinyEmotes" : "Show Twitch");
+                }
+                else
+                {
+                    if (this->seventvAvatar_)
+                    {
+                        this->seventvAvatar_->stop();
+                    }
+                    this->tinyAvatar_->start();
+                    this->ui_.avatarButton->setPixmap(
+                        this->tinyAvatar_->currentPixmap());
                     this->ui_.switchAvatars->getLabel().setText("Show Twitch");
                 }
                 this->updateAvatarUrl();
@@ -1198,6 +1235,19 @@ void UserInfoPopup::loadAvatar(const HelixUser &user)
     {
         this->loadSevenTVAvatar(user);
     }
+
+    // TODO: show user avatar for every instance
+    this->tinyAvatarUrls_.clear();
+    const auto &instances = getSettings()->tinyemotesInstances.readOnly();
+    const auto &instance =
+        std::find_if(instances->begin(), instances->end(), [](const auto &x) {
+            return x.isAvatarEnabled();
+        });
+
+    if (instance != instances->end())
+    {
+        this->loadTinyAvatar(instance->getUrl(), user);
+    }
 }
 
 void UserInfoPopup::loadSevenTVAvatar(const HelixUser &user)
@@ -1281,6 +1331,72 @@ void UserInfoPopup::loadSevenTVAvatar(const HelixUser &user)
         .execute();
 }
 
+void UserInfoPopup::loadTinyAvatar(const QString &instanceUrl,
+                                   const HelixUser &user)
+{
+    QString prefix = "https://";
+
+    if (instanceUrl.startsWith("https://") || instanceUrl.startsWith("http://"))
+    {
+        prefix = "";
+    }
+
+    NetworkRequest(TINYEMOTES_USER_API.arg(prefix, instanceUrl, user.id))
+        .header("Accept", "application/json")
+        .timeout(20000)
+        .onSuccess([this, prefix, instanceUrl](const NetworkResult &result) {
+            auto root = result.parseJson();
+            auto id = root["data"].toObject()["id"].toString();
+
+            auto url = TINYEMOTES_AVATAR_API.arg(prefix, instanceUrl, id);
+
+            this->tinyAvatarUrls_.emplace(instanceUrl, url);
+
+            // We're implementing custom caching here,
+            // because we need the cached file path.
+            auto hash = hashSevenTVUrl(url);
+            auto filename = getApp()->getPaths().cacheDirectory() + "/" + hash;
+
+            if (this->helixAvatarUrl_ == url)
+            {
+                return;
+            }
+
+            QFile cacheFile(filename);
+            if (cacheFile.exists())
+            {
+                this->setTinyAvatar(filename);
+                return;
+            }
+
+            QNetworkRequest req(url);
+
+            // We're using this manager instead of the one provided
+            // in NetworkManager, because we're on a different thread.
+            static auto *manager = new QNetworkAccessManager();
+            auto *reply = manager->get(req);
+
+            QObject::connect(reply, &QNetworkReply::finished, this,
+                             [this, reply, url, filename] {
+                                 if (reply->error() == QNetworkReply::NoError)
+                                 {
+                                     this->saveCacheAvatar(reply->readAll(),
+                                                           filename);
+                                     this->setTinyAvatar(filename);
+                                 }
+                                 else
+                                 {
+                                     qCWarning(chatterinoTinyemotes)
+                                         << "Error fetching Profile Picture:"
+                                         << reply->error();
+                                 }
+                             });
+
+            return;
+        })
+        .execute();
+}
+
 void UserInfoPopup::setSevenTVAvatar(const QString &filename,
                                      const QByteArray &format)
 {
@@ -1293,14 +1409,43 @@ void UserInfoPopup::setSevenTVAvatar(const QString &filename,
     }
 
     QObject::connect(movie, &QMovie::frameChanged, this, [this, movie] {
+        if (this->currentShownAvatar_ == 2)
+        {
+            return;
+        }
         this->ui_.avatarButton->setPixmap(movie->currentPixmap());
     });
 
     movie->start();
     this->seventvAvatar_ = movie;
     this->ui_.switchAvatars->show();
+    if (!this->tinyAvatar_)
+    {
+        this->ui_.switchAvatars->getLabel().setText("Show Twitch");
+        this->currentShownAvatar_ = 1;
+    }
+    this->updateAvatarUrl();
+}
+
+void UserInfoPopup::setTinyAvatar(const QString &filename)
+{
+    auto *movie = new QMovie(filename, "webp", this);
+    if (!movie->isValid())
+    {
+        qCWarning(chatterinoTinyemotes)
+            << "Error reading Profile Picture, " << movie->lastErrorString();
+        return;
+    }
+
+    QObject::connect(movie, &QMovie::frameChanged, this, [this, movie] {
+        this->ui_.avatarButton->setPixmap(movie->currentPixmap());
+    });
+
+    movie->start();
+    this->tinyAvatar_ = movie;
+    this->ui_.switchAvatars->show();
     this->ui_.switchAvatars->getLabel().setText("Show Twitch");
-    this->isTwitchAvatarShown_ = false;
+    this->currentShownAvatar_ = 2;
     this->updateAvatarUrl();
 }
 
@@ -1428,13 +1573,17 @@ void UserInfoPopup::TimeoutWidget::paintEvent(QPaintEvent *)
 
 void UserInfoPopup::updateAvatarUrl()
 {
-    if (this->isTwitchAvatarShown_)
+    if (this->currentShownAvatar_ == 0)
     {
         this->avatarUrl_ = this->helixAvatarUrl_;
     }
-    else
+    else if (this->currentShownAvatar_ == 1)
     {
         this->avatarUrl_ = this->seventvAvatarUrl_;
+    }
+    else
+    {
+        this->avatarUrl_ = this->tinyAvatarUrls_.begin()->second;
     }
 }
 

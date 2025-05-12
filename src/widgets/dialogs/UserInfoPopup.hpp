@@ -11,6 +11,7 @@
 #include <QPointer>
 
 #include <chrono>
+#include <map>
 
 class QCheckBox;
 class QMovie;
@@ -19,6 +20,10 @@ namespace chatterino {
 
 inline static const QString SEVENTV_USER_API =
     "https://7tv.io/v3/users/twitch/%1";
+
+inline static const QString TINYEMOTES_USER_API = "%1%2/users.php?alias_id=%3";
+inline static const QString TINYEMOTES_AVATAR_API =
+    "%1%2/static/userdata/avatars/%3/3x.webp";
 
 class Channel;
 using ChannelPtr = std::shared_ptr<Channel>;
@@ -59,6 +64,9 @@ private:
     void loadSevenTVAvatar(const HelixUser &user);
     void setSevenTVAvatar(const QString &filename, const QByteArray &format);
 
+    void loadTinyAvatar(const QString &instanceUrl, const HelixUser &user);
+    void setTinyAvatar(const QString &filename);
+
     void saveCacheAvatar(const QByteArray &avatar,
                          const QString &filename) const;
 
@@ -74,6 +82,7 @@ private:
     QString avatarUrl_;
     QString helixAvatarUrl_;
     QString seventvAvatarUrl_;
+    std::map<QString, QString> tinyAvatarUrls_;
 
     // The channel the popup was opened from (e.g. /mentions or #forsen). Can be a special channel.
     ChannelPtr channel_;
@@ -118,7 +127,8 @@ private:
     } ui_;
 
     QMovie *seventvAvatar_ = nullptr;
-    bool isTwitchAvatarShown_ = true;
+    QMovie *tinyAvatar_ = nullptr;
+    int currentShownAvatar_ = 0;  // 0 - Twitch, 1 - 7TV, 2 - TinyEmotes
     QPixmap avatarPixmap_;
     QPointer<EditUserNotesDialog> editUserNotesDialog_;
 

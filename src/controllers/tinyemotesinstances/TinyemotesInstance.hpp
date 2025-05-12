@@ -16,18 +16,19 @@ using ImagePtr = std::shared_ptr<Image>;
 class TinyemotesInstance
 {
 public:
-
-    TinyemotesInstance(const QString &url, bool enableGlobalEmotes, bool enableChannelEmotes);
+    TinyemotesInstance(const QString &url, bool enableGlobalEmotes,
+                       bool enableChannelEmotes, bool enableAvatars);
 
     bool operator==(const TinyemotesInstance &other) const;
 
     const QString &getUrl() const;
     bool isGlobalEmotesEnabled() const;
     bool isChannelEmotesEnabled() const;
+    bool isAvatarEnabled() const;
 
 private:
     QString url_;
-    bool globalEmotesEnabled_, channelEmotesEnabled_;
+    bool globalEmotesEnabled_, channelEmotesEnabled_, avatarsEnabled_;
 };
 
 }  // namespace chatterino
@@ -42,8 +43,11 @@ struct Serialize<chatterino::TinyemotesInstance> {
         rapidjson::Value ret(rapidjson::kObjectType);
 
         chatterino::rj::set(ret, "url", value.getUrl(), a);
-        chatterino::rj::set(ret, "channelEmotes", value.isChannelEmotesEnabled(), a);
-        chatterino::rj::set(ret, "globalEmotes", value.isGlobalEmotesEnabled(), a);
+        chatterino::rj::set(ret, "channelEmotes",
+                            value.isChannelEmotesEnabled(), a);
+        chatterino::rj::set(ret, "globalEmotes", value.isGlobalEmotesEnabled(),
+                            a);
+        chatterino::rj::set(ret, "avatars", value.isAvatarEnabled(), a);
 
         return ret;
     }
@@ -52,12 +56,13 @@ struct Serialize<chatterino::TinyemotesInstance> {
 template <>
 struct Deserialize<chatterino::TinyemotesInstance> {
     static chatterino::TinyemotesInstance get(const rapidjson::Value &value,
-                                            bool *error = nullptr)
+                                              bool *error = nullptr)
     {
         if (!value.IsObject())
         {
             PAJLADA_REPORT_ERROR(error)
-            return chatterino::TinyemotesInstance(QString(), false, false);
+            return chatterino::TinyemotesInstance(QString(), false, false,
+                                                  false);
         }
 
         QString url;
@@ -69,7 +74,18 @@ struct Deserialize<chatterino::TinyemotesInstance> {
         bool enableGlobalEmotes;
         chatterino::rj::getSafe(value, "globalEmotes", enableGlobalEmotes);
 
-        return chatterino::TinyemotesInstance(url, enableGlobalEmotes, enableChannelEmotes);
+        bool enableAvatars;
+        if (value.HasMember("avatars"))
+        {
+            chatterino::rj::getSafe(value, "avatars", enableAvatars);
+        }
+        else
+        {
+            enableAvatars = true;
+        }
+
+        return chatterino::TinyemotesInstance(
+            url, enableGlobalEmotes, enableChannelEmotes, enableAvatars);
     }
 };
 

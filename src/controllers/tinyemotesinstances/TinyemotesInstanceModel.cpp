@@ -10,7 +10,7 @@ namespace chatterino {
 
 // commandmodel
 TinyemotesInstanceModel ::TinyemotesInstanceModel(QObject *parent)
-    : SignalVectorModel<TinyemotesInstance>(3, parent)
+    : SignalVectorModel<TinyemotesInstance>(4, parent)
 {
 }
 
@@ -18,19 +18,20 @@ TinyemotesInstanceModel ::TinyemotesInstanceModel(QObject *parent)
 TinyemotesInstance TinyemotesInstanceModel::getItemFromRow(
     std::vector<QStandardItem *> &row, const TinyemotesInstance &original)
 {
-    return TinyemotesInstance(
-        row[Column::Url]->data(Qt::DisplayRole).toString(),
-        row[Column::GlobalEmotes]->data(Qt::CheckStateRole).toBool(),
-        row[Column::ChannelEmotes]->data(Qt::CheckStateRole).toBool());
+    return {row[Column::Url]->data(Qt::DisplayRole).toString(),
+            row[Column::GlobalEmotes]->data(Qt::CheckStateRole).toBool(),
+            row[Column::ChannelEmotes]->data(Qt::CheckStateRole).toBool(),
+            row[Column::Avatars]->data(Qt::CheckStateRole).toBool()};
 }
 
 // turns a row in the model into a vector item
 void TinyemotesInstanceModel::getRowFromItem(const TinyemotesInstance &item,
-                                           std::vector<QStandardItem *> &row)
+                                             std::vector<QStandardItem *> &row)
 {
     setStringItem(row[Column::Url], item.getUrl());
     setBoolItem(row[Column::GlobalEmotes], item.isGlobalEmotesEnabled());
     setBoolItem(row[Column::ChannelEmotes], item.isChannelEmotesEnabled());
+    setBoolItem(row[Column::Avatars], item.isAvatarEnabled());
 }
 
 }  // namespace chatterino

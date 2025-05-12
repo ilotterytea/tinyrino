@@ -5,10 +5,14 @@
 
 namespace chatterino {
 
-TinyemotesInstance::TinyemotesInstance(const QString &url, bool enableGlobalEmotes, bool enableChannelEmotes)
-    : url_(url),
-    globalEmotesEnabled_(enableGlobalEmotes),
-    channelEmotesEnabled_(enableChannelEmotes)
+TinyemotesInstance::TinyemotesInstance(const QString &url,
+                                       bool enableGlobalEmotes,
+                                       bool enableChannelEmotes,
+                                       bool enableAvatars)
+    : url_(url)
+    , globalEmotesEnabled_(enableGlobalEmotes)
+    , channelEmotesEnabled_(enableChannelEmotes)
+    , avatarsEnabled_(enableAvatars)
 {
 }
 
@@ -16,7 +20,6 @@ bool TinyemotesInstance::operator==(const TinyemotesInstance &other) const
 {
     return this == std::addressof(other);
 }
-
 
 const QString &TinyemotesInstance::getUrl() const
 {
@@ -31,6 +34,11 @@ bool TinyemotesInstance::isGlobalEmotesEnabled() const
 bool TinyemotesInstance::isChannelEmotesEnabled() const
 {
     return this->channelEmotesEnabled_;
+}
+
+bool TinyemotesInstance::isAvatarEnabled() const
+{
+    return this->avatarsEnabled_;
 }
 
 }  // namespace chatterino
