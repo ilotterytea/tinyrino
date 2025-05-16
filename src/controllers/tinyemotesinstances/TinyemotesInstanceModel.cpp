@@ -10,7 +10,7 @@ namespace chatterino {
 
 // commandmodel
 TinyemotesInstanceModel ::TinyemotesInstanceModel(QObject *parent)
-    : SignalVectorModel<TinyemotesInstance>(4, parent)
+    : SignalVectorModel<TinyemotesInstance>(5, parent)
 {
 }
 
@@ -21,7 +21,8 @@ TinyemotesInstance TinyemotesInstanceModel::getItemFromRow(
     return {row[Column::Url]->data(Qt::DisplayRole).toString(),
             row[Column::GlobalEmotes]->data(Qt::CheckStateRole).toBool(),
             row[Column::ChannelEmotes]->data(Qt::CheckStateRole).toBool(),
-            row[Column::Avatars]->data(Qt::CheckStateRole).toBool()};
+            row[Column::Avatars]->data(Qt::CheckStateRole).toBool(),
+            row[Column::Badges]->data(Qt::CheckStateRole).toBool()};
 }
 
 // turns a row in the model into a vector item
@@ -32,6 +33,7 @@ void TinyemotesInstanceModel::getRowFromItem(const TinyemotesInstance &item,
     setBoolItem(row[Column::GlobalEmotes], item.isGlobalEmotesEnabled());
     setBoolItem(row[Column::ChannelEmotes], item.isChannelEmotesEnabled());
     setBoolItem(row[Column::Avatars], item.isAvatarEnabled());
+    setBoolItem(row[Column::Badges], item.isBadgeEnabled());
 }
 
 }  // namespace chatterino

@@ -13,7 +13,13 @@ class TinyemotesInstanceModel : public SignalVectorModel<TinyemotesInstance>
 public:
     explicit TinyemotesInstanceModel(QObject *parent);
 
-    enum Column { Url = 0, GlobalEmotes = 1, ChannelEmotes = 2, Avatars = 3 };
+    enum Column {
+        Url = 0,
+        GlobalEmotes = 1,
+        ChannelEmotes = 2,
+        Avatars = 3,
+        Badges = 4
+    };
 
 protected:
     // turn a vector item into a model row

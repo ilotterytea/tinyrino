@@ -1,5 +1,6 @@
 #pragma once
 
+#include "providers/tinyemotes/TinyBadges.hpp"
 #include "providers/tinyemotes/TinyEmotes.hpp"
 #include "singletons/NativeMessaging.hpp"
 
@@ -96,6 +97,7 @@ public:
     virtual IChatterinoBadges *getChatterinoBadges() = 0;
     virtual FfzBadges *getFfzBadges() = 0;
     virtual SeventvBadges *getSeventvBadges() = 0;
+    virtual TinyBadges *getTinyBadges() = 0;
     virtual IUserDataController *getUserData() = 0;
     virtual ISoundController *getSound() = 0;
     virtual ITwitchLiveController *getTwitchLiveController() = 0;
@@ -173,6 +175,7 @@ private:
     std::unique_ptr<SeventvBadges> seventvBadges;
     std::unique_ptr<SeventvPaints> seventvPaints;
     std::unique_ptr<SeventvPersonalEmotes> seventvPersonalEmotes;
+    std::unique_ptr<TinyBadges> tinyBadges;
     std::unique_ptr<UserDataController> userData;
     std::unique_ptr<ISoundController> sound;
     std::unique_ptr<TwitchLiveController> twitchLiveController;
@@ -218,6 +221,7 @@ public:
     ILogging *getChatLogger() override;
     FfzBadges *getFfzBadges() override;
     SeventvBadges *getSeventvBadges() override;
+    TinyBadges *getTinyBadges() override;
     IUserDataController *getUserData() override;
     ISoundController *getSound() override;
     ITwitchLiveController *getTwitchLiveController() override;

@@ -8,11 +8,12 @@ namespace chatterino {
 TinyemotesInstance::TinyemotesInstance(const QString &url,
                                        bool enableGlobalEmotes,
                                        bool enableChannelEmotes,
-                                       bool enableAvatars)
+                                       bool enableAvatars, bool enableBadges)
     : url_(url)
     , globalEmotesEnabled_(enableGlobalEmotes)
     , channelEmotesEnabled_(enableChannelEmotes)
     , avatarsEnabled_(enableAvatars)
+    , badgesEnabled_(enableBadges)
 {
 }
 
@@ -39,6 +40,11 @@ bool TinyemotesInstance::isChannelEmotesEnabled() const
 bool TinyemotesInstance::isAvatarEnabled() const
 {
     return this->avatarsEnabled_;
+}
+
+bool TinyemotesInstance::isBadgeEnabled() const
+{
+    return this->badgesEnabled_;
 }
 
 }  // namespace chatterino

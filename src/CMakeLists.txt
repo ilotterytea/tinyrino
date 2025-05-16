@@ -367,6 +367,8 @@ set(SOURCE_FILES
         providers/tinyemotes/TinyEmotes.hpp
         providers/tinyemotes/liveupdates/TinyEmotesLiveUpdateMessages.hpp
         providers/tinyemotes/liveupdates/TinyEmotesLiveUpdateMessages.cpp
+        providers/tinyemotes/TinyBadges.cpp
+        providers/tinyemotes/TinyBadges.hpp
 
         providers/chatterino/ChatterinoBadges.cpp
         providers/chatterino/ChatterinoBadges.hpp

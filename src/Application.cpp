@@ -18,6 +18,7 @@
 #include "providers/pronouns/Pronouns.hpp"
 #include "providers/seventv/SeventvAPI.hpp"
 #include "providers/seventv/SeventvEmotes.hpp"
+#include "providers/tinyemotes/TinyBadges.hpp"
 #include "providers/tinyemotes/TinyEmotes.hpp"
 #include "providers/twitch/eventsub/Controller.hpp"
 #include "providers/twitch/TwitchBadges.hpp"
@@ -186,6 +187,7 @@ Application::Application(Settings &_settings, const Paths &paths,
     , seventvBadges(new SeventvBadges)
     , seventvPaints(new SeventvPaints)
     , seventvPersonalEmotes(new SeventvPersonalEmotes)
+    , tinyBadges(new TinyBadges)
     , userData(new UserDataController(paths))
     , sound(makeSoundController(_settings))
     , twitchLiveController(new TwitchLiveController)
@@ -283,6 +285,16 @@ void Application::initialize(Settings &settings, const Paths &paths)
     this->windows->initialize();
 
     this->ffzBadges->load();
+
+    const auto instances = getSettings()->tinyemotesInstances.readOnly();
+
+    for (const auto &instance : *instances)
+    {
+        if (instance.isBadgeEnabled())
+        {
+            this->tinyBadges->load(instance.getUrl());
+        }
+    }
 
     // Load global emotes
     this->bttvEmotes->loadEmotes();
@@ -476,6 +488,12 @@ SeventvBadges *Application::getSeventvBadges()
     assert(this->seventvBadges);
 
     return this->seventvBadges.get();
+}
+
+TinyBadges *Application::getTinyBadges()
+{
+    assert(this->tinyBadges);
+    return this->tinyBadges.get();
 }
 
 IUserDataController *Application::getUserData()

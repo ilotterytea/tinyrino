@@ -24,6 +24,7 @@
 #include "providers/seventv/SeventvBadges.hpp"
 #include "providers/seventv/SeventvEmotes.hpp"
 #include "providers/seventv/SeventvPersonalEmotes.hpp"
+#include "providers/tinyemotes/TinyBadges.hpp"
 #include "providers/tinyemotes/TinyEmotes.hpp"
 #include "providers/twitch/api/Helix.hpp"
 #include "providers/twitch/ChannelPointReward.hpp"
@@ -58,6 +59,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <optional>
 #include <unordered_set>
 
 using namespace chatterino::literals;
@@ -446,18 +448,17 @@ std::tuple<std::optional<EmotePtr>, MessageElementFlags, bool> parseEmote(
 
     if (twitchChannel != nullptr)
     {
-        for (const auto &instance : *instances) {
-            if (!instance.isChannelEmotesEnabled()) {
+        for (const auto &instance : *instances)
+        {
+            if (!instance.isChannelEmotesEnabled())
+            {
                 continue;
             }
 
             emote = twitchChannel->tinyEmote(instance.getUrl(), name);
-            if (emote) {
-                return {
-                    emote,
-                    MessageElementFlag::TinyEmote,
-                    false
-                };
+            if (emote)
+            {
+                return {emote, MessageElementFlag::TinyEmote, false};
             }
         }
 
@@ -505,18 +506,17 @@ std::tuple<std::optional<EmotePtr>, MessageElementFlags, bool> parseEmote(
     }
 
     // Check for global emotes
-    for (const auto &instance : *instances) {
-        if (!instance.isGlobalEmotesEnabled()) {
+    for (const auto &instance : *instances)
+    {
+        if (!instance.isGlobalEmotesEnabled())
+        {
             continue;
         }
 
         emote = globalTinyEmotes->emote(instance.getUrl(), name);
-        if (emote) {
-            return {
-                emote,
-                MessageElementFlag::TinyEmote,
-                false
-            };
+        if (emote)
+        {
+            return {emote, MessageElementFlag::TinyEmote, false};
         }
     }
 
@@ -1677,6 +1677,16 @@ std::pair<MessagePtrMut, HighlightAlert> MessageBuilder::makeIrcMessage(
     builder.appendFfzBadges(twitchChannel, userID);
     builder.appendSeventvBadges(userID);
 
+    const auto &instances = getSettings()->tinyemotesInstances.readOnly();
+    const auto &instance =
+        std::find_if(instances->begin(), instances->end(), [](const auto &x) {
+            return x.isBadgeEnabled();
+        });
+    if (instance != instances->end())
+    {
+        builder.appendTinyBadges(instance->getUrl(), userID);
+    }
+
     builder.appendUsername(tags, args);
 
     TextState textState{.twitchChannel = twitchChannel, .userID = userID};
@@ -2485,6 +2495,28 @@ void MessageBuilder::appendSeventvBadges(const QString &userID)
     if (auto badge = getApp()->getSeventvBadges()->getBadge({userID}))
     {
         this->emplace<BadgeElement>(*badge, MessageElementFlag::BadgeSevenTV);
+    }
+}
+
+void MessageBuilder::appendTinyBadges(const QString &instanceUrl,
+                                      const QString &userID)
+{
+    bool preferRoleBadges = getSettings()->preferTinyRoleBadgesOverCustom;
+
+    std::optional<TinyBadges::Badge> badge =
+        getApp()->getTinyBadges()->getUserBadge(instanceUrl, {userID},
+                                                preferRoleBadges);
+
+    if (!badge.has_value())
+    {
+        badge = getApp()->getTinyBadges()->getUserBadge(instanceUrl, {userID},
+                                                        !preferRoleBadges);
+    }
+
+    if (badge.has_value())
+    {
+        this->emplace<BadgeElement>(badge->badge,
+                                    MessageElementFlag::BadgeTinyemotes);
     }
 }
 

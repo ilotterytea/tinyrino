@@ -16,6 +16,9 @@ public:
     void onShow() final;
 
 private:
+    QCheckBox *createCheckBox(const QString &text,
+                              pajlada::Settings::Setting<bool> &setting,
+                              const QString &toolTipText);
     QTabWidget *tabWidget_;
     EditableModelView *view_;
 };

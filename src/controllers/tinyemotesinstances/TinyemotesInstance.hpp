@@ -17,7 +17,8 @@ class TinyemotesInstance
 {
 public:
     TinyemotesInstance(const QString &url, bool enableGlobalEmotes,
-                       bool enableChannelEmotes, bool enableAvatars);
+                       bool enableChannelEmotes, bool enableAvatars,
+                       bool enableBadges);
 
     bool operator==(const TinyemotesInstance &other) const;
 
@@ -25,10 +26,12 @@ public:
     bool isGlobalEmotesEnabled() const;
     bool isChannelEmotesEnabled() const;
     bool isAvatarEnabled() const;
+    bool isBadgeEnabled() const;
 
 private:
     QString url_;
-    bool globalEmotesEnabled_, channelEmotesEnabled_, avatarsEnabled_;
+    bool globalEmotesEnabled_, channelEmotesEnabled_, avatarsEnabled_,
+        badgesEnabled_;
 };
 
 }  // namespace chatterino
@@ -48,6 +51,7 @@ struct Serialize<chatterino::TinyemotesInstance> {
         chatterino::rj::set(ret, "globalEmotes", value.isGlobalEmotesEnabled(),
                             a);
         chatterino::rj::set(ret, "avatars", value.isAvatarEnabled(), a);
+        chatterino::rj::set(ret, "badges", value.isBadgeEnabled(), a);
 
         return ret;
     }
@@ -62,7 +66,7 @@ struct Deserialize<chatterino::TinyemotesInstance> {
         {
             PAJLADA_REPORT_ERROR(error)
             return chatterino::TinyemotesInstance(QString(), false, false,
-                                                  false);
+                                                  false, false);
         }
 
         QString url;
@@ -84,8 +88,15 @@ struct Deserialize<chatterino::TinyemotesInstance> {
             enableAvatars = true;
         }
 
-        return chatterino::TinyemotesInstance(
-            url, enableGlobalEmotes, enableChannelEmotes, enableAvatars);
+        bool enableBadges = true;
+        if (value.HasMember("badges"))
+        {
+            chatterino::rj::getSafe(value, "badges", enableBadges);
+        }
+
+        return chatterino::TinyemotesInstance(url, enableGlobalEmotes,
+                                              enableChannelEmotes,
+                                              enableAvatars, enableBadges);
     }
 };
 

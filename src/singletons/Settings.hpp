@@ -717,6 +717,10 @@ public:
 
     QStringSetting additionalExtensionIDs{"/misc/additionalExtensionIDs", ""};
 
+    // Tinyemotes
+    BoolSetting preferTinyRoleBadgesOverCustom = {
+        "/tinyemotes/preferTinyRoleBadgesOverCustom", false};
+
 private:
     ChatterinoSetting<std::vector<HighlightPhrase>> highlightedMessagesSetting =
         {"/highlighting/highlights"};
