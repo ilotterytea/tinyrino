@@ -3,6 +3,7 @@
 #include "Application.hpp"
 #include "controllers/accounts/AccountController.hpp"
 #include "controllers/completion/sources/Helpers.hpp"
+#include "controllers/emotes/EmoteController.hpp"
 #include "providers/bttv/BttvEmotes.hpp"
 #include "providers/emoji/Emojis.hpp"
 #include "providers/ffz/FfzEmotes.hpp"
@@ -11,44 +12,43 @@
 #include "providers/twitch/TwitchAccount.hpp"
 #include "providers/twitch/TwitchChannel.hpp"
 #include "providers/twitch/TwitchIrcServer.hpp"
-#include "singletons/Emotes.hpp"
 #include "singletons/Settings.hpp"
+#include "widgets/splits/InputCompletionItem.hpp"
 
 namespace chatterino::completion {
 
 namespace {
 
-    void addEmotes(std::vector<EmoteItem> &out, const EmoteMap &map,
-                   const QString &providerName)
+void addEmotes(std::vector<EmoteItem> &out, const EmoteMap &map,
+               const QString &providerName)
+{
+    for (auto &&emote : map)
     {
-        for (auto &&emote : map)
-        {
-            out.push_back({.emote = emote.second,
-                           .searchName = emote.first.string,
-                           .tabCompletionName = emote.first.string,
-                           .displayName = emote.second->name.string,
-                           .providerName = providerName,
-                           .isEmoji = false});
-        }
+        out.push_back({.emote = emote.second,
+                       .searchName = emote.first.string,
+                       .tabCompletionName = emote.first.string,
+                       .displayName = emote.second->name.string,
+                       .providerName = providerName,
+                       .isEmoji = false});
     }
+}
 
-    void addEmojis(std::vector<EmoteItem> &out,
-                   const std::vector<EmojiPtr> &map)
+void addEmojis(std::vector<EmoteItem> &out, const std::vector<EmojiPtr> &map)
+{
+    for (const auto &emoji : map)
     {
-        for (const auto &emoji : map)
+        for (auto &&shortCode : emoji->shortCodes)
         {
-            for (auto &&shortCode : emoji->shortCodes)
-            {
-                out.push_back(
-                    {.emote = emoji->emote,
-                     .searchName = shortCode,
-                     .tabCompletionName = QStringLiteral(":%1:").arg(shortCode),
-                     .displayName = shortCode,
-                     .providerName = "Emoji",
-                     .isEmoji = true});
-            }
-        };
-    }
+            out.push_back(
+                {.emote = emoji->emote,
+                 .searchName = shortCode,
+                 .tabCompletionName = QStringLiteral(":%1:").arg(shortCode),
+                 .displayName = shortCode,
+                 .providerName = "Emoji",
+                 .isEmoji = true});
+        }
+    };
+}
 
 }  // namespace
 
@@ -117,17 +117,21 @@ void EmoteSource::initializeFromChannel(const Channel *channel)
             }
 
             // TODO extract "Channel {BetterTTV,7TV,FrankerFaceZ}" text into a #define.
-            for (const auto &instance : *instances) {
-                if (!instance.isChannelEmotesEnabled()) {
+            for (const auto &instance : *instances)
+            {
+                if (!instance.isChannelEmotesEnabled())
+                {
                     continue;
                 }
 
                 auto tinyOptional = tc->tinyEmotes(instance.getUrl());
-                if (!tinyOptional.has_value()) {
+                if (!tinyOptional.has_value())
+                {
                     continue;
                 }
 
-                if (auto tiny = tinyOptional.value()) {
+                if (auto tiny = tinyOptional.value())
+                {
                     addEmotes(emotes, *tiny, "Channel " + instance.getUrl());
                 }
             }
@@ -146,12 +150,15 @@ void EmoteSource::initializeFromChannel(const Channel *channel)
             }
         }
 
-        for (const auto &instance : *instances) {
-            if (!instance.isGlobalEmotesEnabled()) {
+        for (const auto &instance : *instances)
+        {
+            if (!instance.isGlobalEmotesEnabled())
+            {
                 continue;
             }
 
-            if (auto tinyG = app->getTinyEmotes()->emotes(instance.getUrl())) {
+            if (auto tinyG = app->getTinyEmotes()->emotes(instance.getUrl()))
+            {
                 addEmotes(emotes, *tinyG, "Global " + instance.getUrl());
             }
         }

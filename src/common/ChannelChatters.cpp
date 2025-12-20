@@ -33,6 +33,8 @@ void ChannelChatters::addJoinedUser(const QString &user, bool isMod,
     assertInGuiThread();
 
     if (isIgnoredMessage(IgnoredMessageParameters{
+            .message = {},
+            .twitchUserID = {},
             .twitchUserLogin = user,
             .isMod = isMod,
             .isBroadcaster = isBroadcaster,
@@ -69,6 +71,8 @@ void ChannelChatters::addPartedUser(const QString &user, bool isMod,
     assertInGuiThread();
 
     if (isIgnoredMessage(IgnoredMessageParameters{
+            .message = {},
+            .twitchUserID = {},
             .twitchUserLogin = user,
             .isMod = isMod,
             .isBroadcaster = isBroadcaster,
@@ -112,7 +116,7 @@ size_t ChannelChatters::colorsSize() const
     return size;
 }
 
-const QColor ChannelChatters::getUserColor(const QString &user)
+QColor ChannelChatters::getUserColor(const QString &user) const
 {
     const auto chatterColors = this->chatterColors_.access();
 

@@ -4,8 +4,9 @@
 #include "common/FlagsEnum.hpp"
 #include "common/Literals.hpp"
 #include "common/QLogging.hpp"
+#include "controllers/emotes/EmoteController.hpp"
 #include "controllers/hotkeys/HotkeyController.hpp"
-#include "singletons/Emotes.hpp"
+#include "singletons/helper/GifTimer.hpp"
 #include "singletons/Settings.hpp"
 #include "singletons/WindowManager.hpp"
 #include "util/PostToThread.hpp"
@@ -20,7 +21,9 @@
 #include <QGraphicsEffect>
 #include <QGridLayout>
 #include <QKeySequence>
+#include <QMessageBox>
 #include <QSizeGrip>
+#include <QWindow>
 
 #ifdef Q_OS_WIN
 #    include <Windows.h>
@@ -190,7 +193,7 @@ OverlayWindow::OverlayWindow(IndirectChannel channel,
     this->updateScale();
 
     this->triggerFirstActivation();
-    getApp()->getEmotes()->getGIFTimer().registerOpenOverlayWindow();
+    getApp()->getEmotes()->getGIFTimer()->registerOpenOverlayWindow();
 }
 
 OverlayWindow::~OverlayWindow()
@@ -198,7 +201,7 @@ OverlayWindow::~OverlayWindow()
 #ifdef Q_OS_WIN
     ::DestroyCursor(this->sizeAllCursor_);
 #endif
-    getApp()->getEmotes()->getGIFTimer().unregisterOpenOverlayWindow();
+    getApp()->getEmotes()->getGIFTimer()->unregisterOpenOverlayWindow();
 }
 
 void OverlayWindow::applyTheme()
@@ -230,6 +233,10 @@ bool OverlayWindow::eventFilter(QObject * /*object*/, QEvent *event)
     switch (event->type())
     {
         case QEvent::MouseButtonPress: {
+            if (this->windowHandle()->startSystemMove())
+            {
+                return true;
+            }
             auto *evt = dynamic_cast<QMouseEvent *>(event);
             this->moving_ = true;
             this->moveOrigin_ = evt->globalPosition().toPoint();

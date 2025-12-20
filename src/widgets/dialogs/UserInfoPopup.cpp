@@ -16,7 +16,6 @@
 #include "providers/IvrApi.hpp"
 #include "providers/pronouns/Pronouns.hpp"
 #include "providers/twitch/api/Helix.hpp"
-#include "providers/twitch/ChannelPointReward.hpp"
 #include "providers/twitch/TwitchAccount.hpp"
 #include "providers/twitch/TwitchChannel.hpp"
 #include "providers/twitch/TwitchIrcServer.hpp"
@@ -26,15 +25,20 @@
 #include "singletons/Theme.hpp"
 #include "singletons/WindowManager.hpp"
 #include "util/Clipboard.hpp"
+#include "util/FormatTime.hpp"
 #include "util/Helpers.hpp"
 #include "util/LayoutCreator.hpp"
 #include "util/PostToThread.hpp"
+#include "widgets/buttons/LabelButton.hpp"
+#include "widgets/buttons/PixmapButton.hpp"
 #include "widgets/dialogs/EditUserNotesDialog.hpp"
 #include "widgets/helper/ChannelView.hpp"
-#include "widgets/helper/EffectLabel.hpp"
 #include "widgets/helper/InvisibleSizeGrip.hpp"
 #include "widgets/helper/Line.hpp"
+#include "widgets/helper/LiveIndicator.hpp"
+#include "widgets/helper/ScalingSpacerItem.hpp"
 #include "widgets/Label.hpp"
+#include "widgets/Notebook.hpp"
 #include "widgets/Scrollbar.hpp"
 #include "widgets/splits/Split.hpp"
 #include "widgets/Window.hpp"
@@ -54,7 +58,6 @@
 #include <utility>
 
 namespace {
-
 constexpr QStringView TEXT_FOLLOWERS = u"Followers: %1";
 constexpr QStringView TEXT_CREATED = u"Created: %1";
 constexpr QStringView TEXT_TITLE = u"%1's Usercard - #%2";
@@ -63,22 +66,21 @@ constexpr QStringView TEXT_UNAVAILABLE = u"(not available)";
 constexpr QStringView TEXT_PRONOUNS = u"Pronouns: %1";
 constexpr QStringView TEXT_UNSPECIFIED = u"(unspecified)";
 constexpr QStringView TEXT_LOADING = u"(loading...)";
-constexpr qsizetype NOTES_PREVIEW_LENGTH = 80;
 
 using namespace chatterino;
 
 Label *addCopyableLabel(LayoutCreator<QHBoxLayout> box, const char *tooltip,
-                        Button **copyButton = nullptr)
+                        PixmapButton **copyButton = nullptr)
 {
     auto label = box.emplace<Label>();
-    auto button = box.emplace<Button>();
+    auto button = box.emplace<PixmapButton>();
     if (copyButton != nullptr)
     {
         button.assign(copyButton);
     }
     button->setPixmap(getApp()->getThemes()->buttons.copy);
-    button->setScaleIndependantSize(18, 18);
-    button->setDim(Button::Dim::Lots);
+    button->setScaleIndependentSize(18, 18);
+    button->setDim(DimButton::Dim::Lots);
     button->setToolTip(tooltip);
     QObject::connect(
         button.getElement(), &Button::leftClicked,
@@ -113,7 +115,7 @@ bool checkMessageUserName(const QString &userName, MessagePtr message)
 
 ChannelPtr filterMessages(const QString &userName, ChannelPtr channel)
 {
-    LimitedQueueSnapshot<MessagePtr> snapshot = channel->getMessageSnapshot();
+    std::vector<MessagePtr> snapshot = channel->getMessageSnapshot();
 
     ChannelPtr channelPtr;
     if (channel->isTwitchChannel())
@@ -126,10 +128,8 @@ ChannelPtr filterMessages(const QString &userName, ChannelPtr channel)
             std::make_shared<Channel>(channel->getName(), Channel::Type::None);
     }
 
-    for (size_t i = 0; i < snapshot.size(); i++)
+    for (const auto &message : snapshot)
     {
-        MessagePtr message = snapshot[i];
-
         if (checkMessageUserName(userName, message))
         {
             channelPtr->addMessage(message, MessageContext::Repost);
@@ -290,19 +290,19 @@ UserInfoPopup::UserInfoPopup(bool closeAutomatically, Split *split)
     {
         auto avatarBox = head.emplace<QVBoxLayout>().withoutMargin();
         // avatar
-        auto avatar =
-            avatarBox.emplace<Button>(nullptr).assign(&this->ui_.avatarButton);
-
-        avatar->setScaleIndependantSize(100, 100);
-        avatar->setDim(Button::Dim::None);
+        auto avatar = avatarBox.emplace<PixmapButton>(nullptr).assign(
+            &this->ui_.avatarButton);
+        avatar->setScaleIndependentSize(100, 100);
+        avatar->setDim(DimButton::Dim::None);
         QObject::connect(
             avatar.getElement(), &Button::clicked,
             [this](Qt::MouseButton button) {
                 switch (button)
                 {
                     case Qt::LeftButton: {
-                        QDesktopServices::openUrl(QUrl(
-                            "https://twitch.tv/" + this->userName_.toLower()));
+                        QDesktopServices::openUrl(
+                            QUrl("https://www.twitch.tv/" +
+                                 this->userName_.toLower()));
                     }
                     break;
 
@@ -365,11 +365,12 @@ UserInfoPopup::UserInfoPopup(bool closeAutomatically, Split *split)
                     default:;
                 }
             });
-        auto switchAv = avatarBox.emplace<EffectLabel2>(nullptr, 2)
-                            .assign(&this->ui_.switchAvatars);
+        auto switchAv =
+            avatarBox.emplace<LabelButton>(QString{}, nullptr, QSize{2, 2})
+                .assign(&this->ui_.switchAvatars);
         switchAv->hide();
         QObject::connect(
-            switchAv.getElement(), &EffectLabel2::leftClicked, [this] {
+            switchAv.getElement(), &LabelButton::leftClicked, [this] {
                 if (!this->seventvAvatar_ && !this->tinyAvatar_)
                 {
                     this->ui_.switchAvatars->hide();
@@ -393,13 +394,12 @@ UserInfoPopup::UserInfoPopup(bool closeAutomatically, Split *split)
                     if (this->tinyAvatar_)
                     {
                         this->tinyAvatar_->stop();
-                        this->ui_.switchAvatars->getLabel().setText(
-                            "Show TinyEmotes");
+                        this->ui_.switchAvatars->setText("Show TinyEmotes");
                     }
                     if (this->seventvAvatar_)
                     {
                         this->seventvAvatar_->stop();
-                        this->ui_.switchAvatars->getLabel().setText("Show 7TV");
+                        this->ui_.switchAvatars->setText("Show 7TV");
                     }
                     this->ui_.avatarButton->setPixmap(this->avatarPixmap_);
                 }
@@ -409,7 +409,7 @@ UserInfoPopup::UserInfoPopup(bool closeAutomatically, Split *split)
                         this->seventvAvatar_->currentPixmap());
                     this->seventvAvatar_->start();
 
-                    this->ui_.switchAvatars->getLabel().setText(
+                    this->ui_.switchAvatars->setText(
                         this->tinyAvatar_ ? "Show TinyEmotes" : "Show Twitch");
                 }
                 else
@@ -421,7 +421,7 @@ UserInfoPopup::UserInfoPopup(bool closeAutomatically, Split *split)
                     this->tinyAvatar_->start();
                     this->ui_.avatarButton->setPixmap(
                         this->tinyAvatar_->currentPixmap());
-                    this->ui_.switchAvatars->getLabel().setText("Show Twitch");
+                    this->ui_.switchAvatars->setText("Show Twitch");
                 }
                 this->updateAvatarUrl();
             });
@@ -436,6 +436,13 @@ UserInfoPopup::UserInfoPopup(bool closeAutomatically, Split *split)
 
                 this->ui_.nameLabel = addCopyableLabel(box, "Copy name");
                 this->ui_.nameLabel->setFontStyle(FontStyle::UiMediumBold);
+                this->ui_.nameLabel->setPadding(QMargins(8, 0, 1, 0));
+                this->ui_.liveIndicator = new LiveIndicator;
+                this->ui_.liveIndicator->hide();
+                // addCopyableLabel adds the copy button last -> add the indicator before that
+                box->insertWidget(box->count() - 1, this->ui_.liveIndicator);
+                box->insertItem(box->count() - 1,
+                                ScalingSpacerItem::horizontal(7));
                 box->addSpacing(5);
                 box->addStretch(1);
 
@@ -489,24 +496,22 @@ UserInfoPopup::UserInfoPopup(bool closeAutomatically, Split *split)
             .assign(&this->ui_.ignoreHighlights);
         // visibility of this is updated in setData
 
-        auto notesAdd =
-            user.emplace<EffectLabel2>(this).assign(&this->ui_.notesAdd);
-        notesAdd->getLabel().setText("Add notes");
-        auto usercard =
-            user.emplace<EffectLabel2>(this).assign(&this->ui_.usercardLabel);
-        usercard->getLabel().setText("Usercard");
-        auto mod = user.emplace<Button>(this);
+        user.emplace<LabelButton>("Add notes", this)
+            .assign(&this->ui_.notesAdd);
+        auto usercard = user.emplace<LabelButton>("Usercard", this)
+                            .assign(&this->ui_.usercardLabel);
+        auto mod = user.emplace<PixmapButton>(this);
         mod->setPixmap(getResources().buttons.mod);
-        mod->setScaleIndependantSize(30, 30);
-        auto unmod = user.emplace<Button>(this);
+        mod->setScaleIndependentSize(30, 30);
+        auto unmod = user.emplace<PixmapButton>(this);
         unmod->setPixmap(getResources().buttons.unmod);
-        unmod->setScaleIndependantSize(30, 30);
-        auto vip = user.emplace<Button>(this);
+        unmod->setScaleIndependentSize(30, 30);
+        auto vip = user.emplace<PixmapButton>(this);
         vip->setPixmap(getResources().buttons.vip);
-        vip->setScaleIndependantSize(30, 30);
-        auto unvip = user.emplace<Button>(this);
+        vip->setScaleIndependentSize(30, 30);
+        auto unvip = user.emplace<PixmapButton>(this);
         unvip->setPixmap(getResources().buttons.unvip);
-        unvip->setScaleIndependantSize(30, 30);
+        unvip->setScaleIndependentSize(30, 30);
 
         user->addStretch(1);
 
@@ -572,6 +577,7 @@ UserInfoPopup::UserInfoPopup(bool closeAutomatically, Split *split)
 
     auto notesPreview = layout.emplace<Label>().assign(&ui_.notesPreview);
     notesPreview->setVisible(false);
+    notesPreview->setShouldElide(true);
 
     auto lineMod = layout.emplace<Line>(false);
 
@@ -658,6 +664,8 @@ UserInfoPopup::UserInfoPopup(bool closeAutomatically, Split *split)
     {
         this->ui_.noMessagesLabel = new Label("No recent messages");
         this->ui_.noMessagesLabel->setVisible(false);
+        this->ui_.noMessagesLabel->setSizePolicy(QSizePolicy::Expanding,
+                                                 QSizePolicy::Expanding);
 
         this->ui_.latestMessages =
             new ChannelView(this, this->split_, ChannelView::Context::UserCard,
@@ -842,7 +850,7 @@ void UserInfoPopup::installEvents()
 
     // user notes
     QObject::connect(
-        this->ui_.notesAdd, &EffectLabel2::clicked, [this]() mutable {
+        this->ui_.notesAdd, &LabelButton::clicked, [this]() mutable {
             if (this->editUserNotesDialog_.isNull())
             {
                 this->editUserNotesDialog_ = new EditUserNotesDialog(this);
@@ -1029,6 +1037,12 @@ void UserInfoPopup::updateUserData()
             user.displayName, this->underlyingChannel_->getName()));
         this->ui_.createdDateLabel->setText(
             TEXT_CREATED.arg(user.createdAt.section("T", 0, 0)));
+        this->ui_.createdDateLabel->setToolTip(
+            formatLongFriendlyDuration(
+                QDateTime::fromString(user.createdAt, Qt::ISODateWithMs),
+                QDateTime::currentDateTimeUtc()) +
+            u" ago"_s);
+        this->ui_.createdDateLabel->setMouseTracking(true);
         this->ui_.userIDLabel->setText(TEXT_USER_ID % user.id);
         this->ui_.userIDLabel->setProperty("copy-text", user.id);
 
@@ -1056,6 +1070,29 @@ void UserInfoPopup::updateUserData()
                 qCWarning(chatterinoTwitch)
                     << "Error getting followers:" << errorMessage;
             });
+        getHelix()->getStreamById(
+            user.id,
+            [this, hack](bool isLive, const auto &stream) {
+                if (!hack.lock())
+                {
+                    return;
+                }
+
+                if (isLive)
+                {
+                    this->ui_.liveIndicator->setViewers(stream.viewerCount);
+                    this->ui_.liveIndicator->show();
+                }
+                else
+                {
+                    this->ui_.liveIndicator->hide();
+                }
+            },
+            [id{user.id}]() {
+                qCWarning(chatterinoWidget)
+                    << "Failed to get stream for user ID" << id;
+            },
+            []() {});
 
         // get ignore state
         bool isIgnoring = currentUser->blockedUserIds().contains(user.id);
@@ -1083,6 +1120,7 @@ void UserInfoPopup::updateUserData()
         this->ui_.block->setChecked(isIgnoring);
         this->ui_.block->setEnabled(true);
         this->ui_.ignoreHighlights->setChecked(isIgnoringHighlights);
+        this->ui_.notesAdd->setEnabled(true);
 
         auto type = this->underlyingChannel_->getType();
 
@@ -1105,6 +1143,11 @@ void UserInfoPopup::updateUserData()
                             followedAt.toString("yyyy-MM-dd");
                         this->ui_.followageLabel->setText("❤ Following since " +
                                                           followingSince);
+                        this->ui_.followageLabel->setToolTip(
+                            formatLongFriendlyDuration(
+                                followedAt, QDateTime::currentDateTimeUtc()) +
+                            u" ago"_s);
+                        this->ui_.followageLabel->setMouseTracking(true);
                     }
 
                     if (subageInfo.isSubHidden)
@@ -1180,6 +1223,8 @@ void UserInfoPopup::updateUserData()
 
     this->ui_.block->setEnabled(false);
     this->ui_.ignoreHighlights->setEnabled(false);
+    this->ui_.notesAdd->setEnabled(false);
+
     bool isMyself =
         getApp()->getAccounts()->twitch.getCurrent()->getUserName().compare(
             this->userName_, Qt::CaseInsensitive) == 0;
@@ -1421,7 +1466,7 @@ void UserInfoPopup::setSevenTVAvatar(const QString &filename,
     this->ui_.switchAvatars->show();
     if (!this->tinyAvatar_)
     {
-        this->ui_.switchAvatars->getLabel().setText("Show Twitch");
+        this->ui_.switchAvatars->setText("Show Twitch");
         this->currentShownAvatar_ = 1;
     }
     this->updateAvatarUrl();
@@ -1444,7 +1489,7 @@ void UserInfoPopup::setTinyAvatar(const QString &filename)
     movie->start();
     this->tinyAvatar_ = movie;
     this->ui_.switchAvatars->show();
-    this->ui_.switchAvatars->getLabel().setText("Show Twitch");
+    this->ui_.switchAvatars->setText("Show Twitch");
     this->currentShownAvatar_ = 2;
     this->updateAvatarUrl();
 }
@@ -1484,10 +1529,6 @@ void UserInfoPopup::updateNotes()
     static QRegularExpression spaceRegex{"\\s+"};
 
     auto previewText = "Notes: " + userData->notes.replace(spaceRegex, " ");
-    if (previewText.length() > NOTES_PREVIEW_LENGTH)
-    {
-        previewText = previewText.left(NOTES_PREVIEW_LENGTH - 3) + "...";
-    }
 
     this->ui_.notesPreview->setText(previewText);
     this->ui_.notesPreview->setVisible(true);
@@ -1514,7 +1555,7 @@ UserInfoPopup::TimeoutWidget::TimeoutWidget()
         title->addStretch(1);
         auto label = title.emplace<Label>(text);
         label->setStyleSheet("color: #BBB");
-        label->setHasOffset(false);
+        label->setPadding(QMargins{});
         title->addStretch(1);
 
         auto hbox = vbox.emplace<QHBoxLayout>().withoutMargin();
@@ -1524,9 +1565,9 @@ UserInfoPopup::TimeoutWidget::TimeoutWidget()
 
     const auto addButton = [&](Action action, const QString &title,
                                const QPixmap &pixmap) {
-        auto button = addLayout(title).emplace<Button>(nullptr);
+        auto button = addLayout(title).emplace<PixmapButton>(nullptr);
         button->setPixmap(pixmap);
-        button->setScaleIndependantSize(buttonHeight, buttonHeight);
+        button->setScaleIndependentSize(buttonHeight, buttonHeight);
         button->setBorderColor(QColor(255, 255, 255, 127));
 
         QObject::connect(
@@ -1540,16 +1581,17 @@ UserInfoPopup::TimeoutWidget::TimeoutWidget()
 
         for (const auto &item : getSettings()->timeoutButtons.getValue())
         {
-            auto a = hbox.emplace<EffectLabel2>();
-            a->getLabel().setText(QString::number(item.second) + item.first);
+            auto a = hbox.emplace<LabelButton>();
+            a->setPadding({0, 0});
+            a->setText(QString::number(item.second) + item.first);
 
-            a->setScaleIndependantSize(buttonWidth, buttonHeight);
+            a->setScaleIndependentSize(buttonWidth, buttonHeight);
             a->setBorderColor(borderColor);
 
             const auto pair =
                 std::make_pair(Action::Timeout, calculateTimeoutDuration(item));
 
-            QObject::connect(a.getElement(), &EffectLabel2::leftClicked,
+            QObject::connect(a.getElement(), &LabelButton::leftClicked,
                              [this, pair] {
                                  this->buttonClicked.invoke(pair);
                              });

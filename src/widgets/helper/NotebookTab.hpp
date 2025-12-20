@@ -1,7 +1,7 @@
 #pragma once
 
 #include "common/Common.hpp"
-#include "widgets/helper/Button.hpp"
+#include "widgets/buttons/Button.hpp"
 #include "widgets/helper/ChannelView.hpp"
 #include "widgets/Notebook.hpp"
 
@@ -91,6 +91,9 @@ protected:
     void themeChangedEvent() override;
 
     void paintEvent(QPaintEvent *) override;
+    void paintContent(QPainter &painter) override
+    {
+    }
 
     void mousePressEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
@@ -132,6 +135,8 @@ private:
     void removeHighlightSource(const ChannelView::ChannelViewID &source);
     void updateHighlightStateDueSourcesChange();
 
+    void recreateCloseMultipleTabsMenu(NotebookTabLocation tabLocation);
+
     QPropertyAnimation positionChangedAnimation_;
     QPoint positionAnimationDesiredPoint_;
 
@@ -159,6 +164,9 @@ private:
     int growWidth_ = 0;
 
     QMenu menu_;
+    QMenu *closeMultipleTabsMenu_{};
+    QAction *closeTabsBeforeSelectedAction_{};
+    QAction *closeTabsAfterSelectedAction_{};
 
     pajlada::Signals::SignalHolder managedConnections_;
 };

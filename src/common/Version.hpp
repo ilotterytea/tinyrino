@@ -2,6 +2,10 @@
 
 #include <QString>
 
+#ifdef Q_OS_WIN
+#    include <string>
+#endif
+
 namespace chatterino {
 
 /**
@@ -25,7 +29,7 @@ namespace chatterino {
  *  - 2.4.0-alpha.2
  *  - 2.4.0-alpha
  **/
-inline const QString CHATTERINO_VERSION = QStringLiteral("7.5.3.1");
+inline const QString CHATTERINO_VERSION = QStringLiteral("7.5.4.1");
 
 class Version
 {
@@ -59,6 +63,13 @@ public:
     }
 #endif
 
+#ifdef Q_OS_WIN
+    /// Chatterino's App ID on Windows
+    ///
+    /// See https://learn.microsoft.com/en-us/windows/win32/shell/appids
+    const std::wstring &appUserModelID() const;
+#endif
+
 private:
     Version();
 
@@ -79,6 +90,10 @@ private:
     QString runningString_;
     // Generate a running string (e.g. Running on Arch Linux, kernel 5.14.3) and store it in runningString_ for future use
     void generateRunningString();
+
+#ifdef Q_OS_WIN
+    std::wstring appUserModelID_;
+#endif
 };
 
 };  // namespace chatterino

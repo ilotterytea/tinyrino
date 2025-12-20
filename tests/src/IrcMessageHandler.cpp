@@ -11,11 +11,12 @@
 #include "mocks/BaseApplication.hpp"
 #include "mocks/ChatterinoBadges.hpp"
 #include "mocks/DisabledStreamerMode.hpp"
-#include "mocks/Emotes.hpp"
+#include "mocks/EmoteController.hpp"
 #include "mocks/LinkResolver.hpp"
 #include "mocks/Logging.hpp"
 #include "mocks/TwitchIrcServer.hpp"
 #include "mocks/UserData.hpp"
+#include "providers/bttv/BttvBadges.hpp"
 #include "providers/ffz/FfzBadges.hpp"
 #include "providers/seventv/SeventvBadges.hpp"
 #include "providers/seventv/SeventvPersonalEmotes.hpp"
@@ -25,7 +26,6 @@
 #include "providers/twitch/TwitchBadge.hpp"
 #include "providers/twitch/TwitchBadges.hpp"
 #include "providers/twitch/TwitchChannel.hpp"
-#include "singletons/Emotes.hpp"
 #include "Test.hpp"
 #include "util/IrcHelpers.hpp"
 #include "util/VectorMessageSink.hpp"
@@ -39,6 +39,7 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QString>
+#include <QStringBuilder>
 
 #include <unordered_map>
 #include <vector>
@@ -73,7 +74,7 @@ public:
     {
     }
 
-    IEmotes *getEmotes() override
+    EmoteController *getEmotes() override
     {
         return &this->emotes;
     }
@@ -101,6 +102,11 @@ public:
     FfzBadges *getFfzBadges() override
     {
         return &this->ffzBadges;
+    }
+
+    BttvBadges *getBttvBadges() override
+    {
+        return &this->bttvBadges;
     }
 
     SeventvBadges *getSeventvBadges() override
@@ -155,11 +161,12 @@ public:
 
     mock::EmptyLogging logging;
     AccountController accounts;
-    mock::Emotes emotes;
+    mock::EmoteController emotes;
     mock::UserDataController userData;
     mock::MockTwitchIrcServer twitch;
     mock::ChatterinoBadges chatterinoBadges;
     FfzBadges ffzBadges;
+    BttvBadges bttvBadges;
     SeventvBadges seventvBadges;
     HighlightController highlights;
     SeventvPersonalEmotes personalEmotes;
@@ -582,6 +589,17 @@ TEST_P(TestIrcMessageHandlerP, Run)
     auto channel = makeMockTwitchChannel(u"pajlada"_s, *snapshot);
 
     VectorMessageSink sink;
+
+    const auto &userData = snapshot->param("userData").toObject();
+    for (auto it = userData.begin(); it != userData.end(); ++it)
+    {
+        const auto &userID = it.key();
+        const auto &data = it.value().toObject();
+        if (auto color = data.value("color").toString(); !color.isEmpty())
+        {
+            this->mockApplication->getUserData()->setUserColor(userID, color);
+        }
+    }
 
     for (auto prevInput : snapshot->param("prevMessages").toArray())
     {

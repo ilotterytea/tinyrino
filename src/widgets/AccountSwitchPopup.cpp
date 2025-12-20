@@ -40,12 +40,13 @@ AccountSwitchPopup::AccountSwitchPopup(QWidget *parent)
     vbox->addLayout(hbox);
 
     connect(manageAccountsButton, &QPushButton::clicked, [this]() {
-        SettingsDialog::showDialog(this, SettingsDialogPreference::Accounts);
+        SettingsDialog::showDialog(this->parentWidget(),
+                                   SettingsDialogPreference::Accounts);
     });
 
     this->getLayoutContainer()->setLayout(vbox);
 
-    this->setScaleIndependantSize(200, 200);
+    this->setScaleIndependentSize(200, 200);
     this->themeChangedEvent();
 }
 

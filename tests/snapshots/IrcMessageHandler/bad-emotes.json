@@ -107,25 +107,10 @@
                         "name": "Kappa",
                         "tooltip": "Kappa Tooltip"
                     },
-                    "flags": "BttvEmoteImage|BttvEmoteText",
+                    "flags": "EmoteImage|EmoteText",
                     "link": {
                         "type": "None",
                         "value": ""
-                    },
-                    "text": {
-                        "color": "Text",
-                        "flags": "Misc",
-                        "link": {
-                            "type": "None",
-                            "value": ""
-                        },
-                        "style": "ChatMedium",
-                        "tooltip": "",
-                        "trailingSpace": true,
-                        "type": "TextElement",
-                        "words": [
-                            "Kappa"
-                        ]
                     },
                     "tooltip": "Kappa Tooltip",
                     "trailingSpace": true,
@@ -146,6 +131,7 @@
                 }
             ],
             "flags": "Collapsed",
+            "frozen": false,
             "id": "7be87072-bf24-4fa3-b3df-0ea6fa5f1474",
             "localizedName": "",
             "loginName": "mm2pl",

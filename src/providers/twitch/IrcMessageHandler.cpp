@@ -19,6 +19,7 @@
 #include "providers/twitch/TwitchChannel.hpp"
 #include "providers/twitch/TwitchHelpers.hpp"
 #include "providers/twitch/TwitchIrcServer.hpp"
+#include "providers/twitch/UserColor.hpp"
 #include "singletons/Settings.hpp"
 #include "singletons/StreamerMode.hpp"
 #include "singletons/WindowManager.hpp"
@@ -329,6 +330,39 @@ void IrcMessageHandler::parseMessageInto(Communi::IrcMessage *message,
             sink.addOrReplaceTimeout(std::move(clearChat.message), time);
         }
     }
+
+    if (command == u"CLEARMSG"_s)
+    {
+        // check parameter count
+        if (message->parameters().length() < 1)
+        {
+            return;
+        }
+
+        QString chanName;
+        if (!trimChannelName(message->parameter(0), chanName))
+        {
+            return;
+        }
+
+        auto tags = message->tags();
+
+        QString targetID = tags.value("target-msg-id").toString();
+
+        auto msg = sink.findMessageByID(targetID);
+        if (msg == nullptr)
+        {
+            return;
+        }
+
+        msg->flags.set(MessageFlag::Disabled);
+        msg->flags.set(MessageFlag::InvalidReplyTarget);
+        if (!getSettings()->hideDeletionActions)
+        {
+            sink.addMessage(MessageBuilder::makeDeletionMessageFromIRC(msg),
+                            MessageContext::Original);
+        }
+    }
 }
 
 void IrcMessageHandler::handlePrivMessage(Communi::IrcPrivateMessage *message,
@@ -360,7 +394,8 @@ void IrcMessageHandler::parsePrivMessageInto(
         if (badgesTag.isValid())
         {
             auto parsedBadges = parseBadges(badgesTag.toString());
-            channel->setMod(parsedBadges.contains("moderator"));
+            channel->setMod(parsedBadges.contains("moderator") ||
+                            parsedBadges.contains("lead_moderator"));
             channel->setVIP(parsedBadges.contains("vip"));
             channel->setStaff(parsedBadges.contains("staff"));
         }
@@ -519,6 +554,7 @@ void IrcMessageHandler::handleClearMessageMessage(Communi::IrcMessage *message)
     }
 
     msg->flags.set(MessageFlag::Disabled);
+    msg->flags.set(MessageFlag::InvalidReplyTarget);
     if (!getSettings()->hideDeletionActions)
     {
         chan->addMessage(MessageBuilder::makeDeletionMessageFromIRC(msg),
@@ -547,27 +583,35 @@ void IrcMessageHandler::handleUserStateMessage(Communi::IrcMessage *message)
         return;
     }
 
-    // Checking if currentUser is a VIP or staff member
-    QVariant badgesTag = message->tag("badges");
-    if (badgesTag.isValid())
+    auto *tc = dynamic_cast<TwitchChannel *>(c.get());
+    if (tc != nullptr)
     {
-        auto *tc = dynamic_cast<TwitchChannel *>(c.get());
-        if (tc != nullptr)
+        bool hasModBadge = false;
+
+        // Checking if currentUser is a VIP, staff member or has moderator badges
+        QVariant badgesTag = message->tag("badges");
+        if (badgesTag.isValid())
         {
             auto parsedBadges = parseBadges(badgesTag.toString());
             tc->setVIP(parsedBadges.contains("vip"));
             tc->setStaff(parsedBadges.contains("staff"));
-        }
-    }
 
-    // Checking if currentUser is a moderator
-    QVariant modTag = message->tag("mod");
-    if (modTag.isValid())
-    {
-        auto *tc = dynamic_cast<TwitchChannel *>(c.get());
-        if (tc != nullptr)
+            hasModBadge = parsedBadges.contains("moderator") ||
+                          parsedBadges.contains("lead_moderator");
+        }
+
+        if (hasModBadge)
         {
-            tc->setMod(modTag == "1");
+            tc->setMod(true);
+        }
+        else
+        {
+            QVariant modTag = message->tag("mod");
+            if (modTag.isValid())
+            {
+                // Also checking if the mod tag is present, since badges sometimes disappear in IRC
+                tc->setMod(modTag == "1");
+            }
         }
     }
 }
@@ -633,6 +677,11 @@ void IrcMessageHandler::parseUserNoticeMessageInto(Communi::IrcMessage *message,
                                                    MessageSink &sink,
                                                    TwitchChannel *channel)
 {
+    assert(channel != nullptr);
+
+    const auto *userDataController = getApp()->getUserData();
+    assert(userDataController != nullptr);
+
     auto tags = message->tags();
     auto parameters = message->parameters();
 
@@ -680,7 +729,7 @@ void IrcMessageHandler::parseUserNoticeMessageInto(Communi::IrcMessage *message,
         if (!content.isEmpty())
         {
             addMessage(message, sink, channel, content, *getApp()->getTwitch(),
-                       true, false);
+                       true, false, msgType);
         }
     }
 
@@ -741,9 +790,10 @@ void IrcMessageHandler::parseUserNoticeMessageInto(Communi::IrcMessage *message,
             // subgifts are special because they include two users
             auto msg = MessageBuilder::makeSubgiftMessage(
                 parseTagString(messageText), tags,
-                calculateMessageTime(message).time());
+                calculateMessageTime(message).time(), channel);
 
             msg->flags.set(MessageFlag::Subscription);
+
             if (mirrored)
             {
                 msg->flags.set(MessageFlag::SharedMessage);
@@ -797,18 +847,30 @@ void IrcMessageHandler::parseUserNoticeMessageInto(Communi::IrcMessage *message,
             displayName = login;
         }
 
-        MessageColor userColor = MessageColor::System;
-        if (auto colorTag = tags.value("color").value<QColor>();
-            colorTag.isValid())
-        {
-            userColor = MessageColor(colorTag);
-        }
+        auto userID = tags.value("user-id").toString();
+        auto userColor = twitch::getUserColor(
+                             {
+                                 .userLogin = login,
+                                 .userID = userID,
+                                 .userDataController = userDataController,
+                                 .channelChatters = channel,
+                                 .color = tags.value("color").value<QColor>(),
+                             })
+                             .value_or(MessageColor::System);
 
         auto msg = MessageBuilder::makeSystemMessageWithUser(
             parseTagString(messageText), login, displayName, userColor,
             calculateMessageTime(message).time());
 
-        msg->flags.set(MessageFlag::Subscription);
+        if (msgType == "viewermilestone")
+        {
+            msg->flags.set(MessageFlag::WatchStreak);
+        }
+        else
+        {
+            msg->flags.set(MessageFlag::Subscription);
+        }
+
         if (mirrored)
         {
             msg->flags.set(MessageFlag::SharedMessage);
@@ -970,7 +1032,7 @@ void IrcMessageHandler::addMessage(Communi::IrcMessage *message,
                                    MessageSink &sink, TwitchChannel *chan,
                                    const QString &originalContent,
                                    ITwitchIrcServer &twitch, bool isSub,
-                                   bool isAction)
+                                   bool isAction, const QString &msgType)
 {
     assert(chan);
 
@@ -1094,7 +1156,14 @@ void IrcMessageHandler::addMessage(Communi::IrcMessage *message,
     {
         if (isSub)
         {
-            msg->flags.set(MessageFlag::Subscription);
+            if (msgType == "viewermilestone")
+            {
+                msg->flags.set(MessageFlag::WatchStreak);
+            }
+            else
+            {
+                msg->flags.set(MessageFlag::Subscription);
+            }
 
             if (tags.value("msg-id") != "announcement")
             {

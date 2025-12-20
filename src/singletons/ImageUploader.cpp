@@ -1,6 +1,7 @@
 #include "singletons/ImageUploader.hpp"
 
 #include "Application.hpp"
+#include "common/Channel.hpp"
 #include "common/Env.hpp"
 #include "common/network/NetworkRequest.hpp"
 #include "common/network/NetworkResult.hpp"
@@ -44,7 +45,56 @@ std::optional<QByteArray> convertToPng(const QImage &image)
 
 }  // namespace
 
+namespace chatterino::imageuploader::detail {
+
+// extracting link to either image or its deletion from response body
+QString getJSONValue(QJsonValue responseJson, QStringView jsonPattern)
+{
+    for (auto key : jsonPattern.tokenize(u'.'))
+    {
+        if (responseJson.isObject())
+        {
+            responseJson = responseJson[key];
+        }
+        else if (responseJson.isArray())
+        {
+            bool ok = false;
+            auto idx = key.toLongLong(&ok);
+            if (ok)
+            {
+                responseJson = responseJson[idx];
+            }
+        }
+        else
+        {
+            // we reached a scalar value, no need to continue
+            break;
+        }
+    }
+    return responseJson.toString();
+}
+
+QString getLinkFromResponse(const NetworkResult &response, QString pattern)
+{
+    QRegularExpression regExp("{(.+)}",
+                              QRegularExpression::InvertedGreedinessOption);
+    auto match = regExp.match(pattern);
+
+    auto jsonRoot = response.parseJsonValue();
+    while (match.hasMatch())
+    {
+        pattern.replace(match.captured(0),
+                        getJSONValue(jsonRoot, match.capturedView(1)));
+        match = regExp.match(pattern);
+    }
+    return pattern;
+}
+
+}  // namespace chatterino::imageuploader::detail
+
 namespace chatterino {
+
+using namespace imageuploader::detail;
 
 // logging information on successful uploads to a json file
 void ImageUploader::logToFile(const QString &originalFilePath,
@@ -90,36 +140,16 @@ void ImageUploader::logToFile(const QString &originalFilePath,
     // local path to an image (can be empty)
     // timestamp
     QSaveFile logSaveFile(logFileName);
-    logSaveFile.open(QIODevice::WriteOnly | QIODevice::Text);
+    if (!logSaveFile.open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        qCDebug(chatterinoImageuploader)
+            << "Failed to open log file" << logSaveFile.errorString();
+        return;
+    }
     QJsonArray entries = QJsonDocument::fromJson(logs).array();
     entries.push_back(newLogEntry);
     logSaveFile.write(QJsonDocument(entries).toJson());
     logSaveFile.commit();
-}
-
-// extracting link to either image or its deletion from response body
-QString getJSONValue(QJsonValue responseJson, QString jsonPattern)
-{
-    for (const QString &key : jsonPattern.split("."))
-    {
-        responseJson = responseJson[key];
-    }
-    return responseJson.toString();
-}
-
-QString getLinkFromResponse(NetworkResult response, QString pattern)
-{
-    QRegularExpression regExp("{(.+)}",
-                              QRegularExpression::InvertedGreedinessOption);
-    auto match = regExp.match(pattern);
-
-    while (match.hasMatch())
-    {
-        pattern.replace(match.captured(0),
-                        getJSONValue(response.parseJson(), match.captured(1)));
-        match = regExp.match(pattern);
-    }
-    return pattern;
 }
 
 void ImageUploader::sendImageUploadRequest(RawImageData imageData,
@@ -145,7 +175,7 @@ void ImageUploader::sendImageUploadRequest(RawImageData imageData,
     part.setHeader(QNetworkRequest::ContentLengthHeader,
                    QVariant(imageData.data.length()));
     part.setHeader(QNetworkRequest::ContentDispositionHeader,
-                   QString("form-data; name=\"%1\"; filename=\"control_v.%2\"")
+                   QString(R"(form-data; name="%1"; filename="control_v.%2")")
                        .arg(formField)
                        .arg(imageData.format));
     payload->append(part);

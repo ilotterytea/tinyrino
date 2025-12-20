@@ -53,7 +53,7 @@ jobs:
       C2_ENABLE_CRASHPAD: ${{ matrix.skip-crashpad == false }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
           fetch-depth: 0 # allows for tags access
@@ -103,7 +103,7 @@ jobs:
 
       - name: Upload artifact - AppImage (Ubuntu)
         if: matrix.build-appimage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Chatterino-x86_64-Qt-${{ matrix.qt-version }}.AppImage
           path: build/Chatterino-x86_64.AppImage
@@ -116,10 +116,26 @@ jobs:
 
       - name: Upload artifact - .deb (Ubuntu)
         if: matrix.build-deb
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Chatterino-${{ matrix.os }}-Qt-${{ matrix.qt-version }}.deb
           path: build/Chatterino-${{ matrix.os }}-x86_64.deb
+
+  build-flatpak:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.8
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          fetch-depth: 0 # tag access
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: chatterino.flatpak
+          manifest-path: .CI/com.chatterino.chatterino.yml
+          cache-key: flatpak-builder-${{ github.sha }}
 
   build:
     name: "Build ${{ matrix.os }}, Qt ${{ matrix.qt-version }} (LTO:${{ matrix.force-lto }}, crashpad:${{ matrix.skip-crashpad && 'off' || 'on' }})"
@@ -129,13 +145,13 @@ jobs:
         include:
           # Windows
           - os: windows-latest
-            qt-version: 6.7.3
+            qt-version: 6.9.3
             force-lto: false
             skip-artifact: false
             skip-crashpad: false
           # macOS (ARM)
           - os: macos-latest
-            qt-version: 6.7.1
+            qt-version: 6.9.3
             force-lto: false
             skip-artifact: false
             skip-crashpad: false
@@ -146,18 +162,18 @@ jobs:
       C2_ENABLE_CRASHPAD: ${{ matrix.skip-crashpad == false }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
           fetch-depth: 0 # allows for tags access
 
       - name: Install Qt6
         if: startsWith(matrix.qt-version, '6.')
-        uses: jurplel/install-qt-action@v4.2.1
+        uses: jurplel/install-qt-action@v4.3.0
         with:
           cache: true
           cache-key-prefix: ${{ runner.os }}-QtCache-${{ matrix.qt-version }}-v2
-          modules: qt5compat qtimageformats
+          modules: qtimageformats
           version: ${{ matrix.qt-version }}
 
       # WINDOWS
@@ -167,7 +183,7 @@ jobs:
 
       - name: Setup sccache (Windows)
         # sccache v0.7.4
-        uses: hendrikmuhs/ccache-action@v1.2.18
+        uses: hendrikmuhs/ccache-action@v1.2.20
         if: startsWith(matrix.os, 'windows')
         with:
           variant: sccache
@@ -179,13 +195,13 @@ jobs:
 
       - name: Cache conan packages (Windows)
         if: startsWith(matrix.os, 'windows')
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           key: ${{ runner.os }}-conan-user-${{ hashFiles('**/conanfile.py') }}-QT6
           path: ~/.conan2/
 
       - name: Setup Python (Windows)
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         if: startsWith(matrix.os, 'windows')
         with:
           python-version: "3.13"
@@ -243,7 +259,7 @@ jobs:
         if: startsWith(matrix.os, 'windows')
         working-directory: build
         run: |
-          windeployqt bin/chatterino.exe --release --no-compiler-runtime --no-translations --no-opengl-sw --dir Chatterino2/
+          windeployqt bin/chatterino.exe --release --no-compiler-runtime --no-translations --no-opengl-sw --dir Chatterino2/ --force-openssl
           cp bin/chatterino.exe Chatterino2/
           ..\.CI\deploy-crt.ps1 Chatterino2
           echo nightly > Chatterino2/modes
@@ -256,14 +272,14 @@ jobs:
 
       - name: Upload artifact (Windows - binary)
         if: startsWith(matrix.os, 'windows') && !matrix.skip-artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: chatterino-windows-x86-64-Qt-${{ matrix.qt-version }}.zip
           path: build/chatterino-windows-x86-64-Qt-${{ matrix.qt-version }}.zip
 
       - name: Upload artifact (Windows - symbols)
         if: startsWith(matrix.os, 'windows') && !matrix.skip-artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: chatterino-windows-x86-64-Qt-${{ matrix.qt-version }}-symbols.pdb.7z
           path: build/bin/chatterino-Qt-${{ matrix.qt-version }}.pdb.7z
@@ -278,9 +294,9 @@ jobs:
         if: startsWith(matrix.os, 'macos')
         run: |
           # binary dependencies
-          ./.CI/SetupHomebrewDeps.sh boost openssl@3
+          ./.CI/SetupHomebrewDeps.sh boost openssl
           # build and header-only dependencies
-          brew install rapidjson p7zip create-dmg cmake tree
+          brew install rapidjson p7zip create-dmg tree
         shell: bash
 
       - name: Build (MacOS)
@@ -313,7 +329,7 @@ jobs:
           echo "-> $MACOS_CODESIGN_CERTIFICATE"
 
           echo "Downloading kimageformats plugins"
-          curl -SsfLo kimg.zip "https://github.com/nerixyz/kimageformats-binaries/releases/download/cont/kimageformats-macos-13-${{ matrix.qt-version}}.zip"
+          curl -SsfLo kimg.zip "https://github.com/nerixyz/kimageformats-binaries/releases/download/cont/kimageformats-macos-14-${{ matrix.qt-version}}.zip"
 
           ./../.CI/MacDeploy.sh
 
@@ -355,70 +371,76 @@ jobs:
 
       - name: Upload artifact (MacOS)
         if: startsWith(matrix.os, 'macos')
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: chatterino-macos-Qt-${{ matrix.qt-version }}-universal.dmg
           path: build/chatterino-macos-Qt-${{ matrix.qt-version }}-universal.dmg
 
   create-release:
-    needs: [build-ubuntu-docker, build]
+    needs: [build-ubuntu-docker, build-flatpak, build]
     runs-on: ubuntu-latest
     if: (github.event_name == 'push' && github.ref == 'refs/heads/tinyrino')
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # allows for tags access
 
       # Windows
-      - uses: actions/download-artifact@v4
-        name: Windows Qt6.7.3
+      - uses: actions/download-artifact@v7
+        name: Windows Qt6.9.3
         with:
-          name: chatterino-windows-x86-64-Qt-6.7.3.zip
+          name: chatterino-windows-x86-64-Qt-6.9.3.zip
           path: release-artifacts/
 
-      - uses: actions/download-artifact@v4
-        name: Windows Qt6.7.3 symbols
+      - uses: actions/download-artifact@v7
+        name: Windows Qt6.9.3 symbols
         with:
-          name: chatterino-windows-x86-64-Qt-6.7.3-symbols.pdb.7z
+          name: chatterino-windows-x86-64-Qt-6.9.3-symbols.pdb.7z
           path: release-artifacts/
 
       # Linux
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         name: Linux AppImage
         with:
           name: Chatterino-x86_64-Qt-6.7.2.AppImage
           path: release-artifacts/
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         name: Ubuntu 22.04 deb
         with:
           name: Chatterino-ubuntu-22.04-Qt-6.7.2.deb
           path: release-artifacts/
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         name: Ubuntu 24.04 deb
         with:
           name: Chatterino-ubuntu-24.04-Qt-6.7.2.deb
           path: release-artifacts/
 
-      # macOS
-      - uses: actions/download-artifact@v4
-        name: macOS Qt6.7.1 dmg
+      - uses: actions/download-artifact@v7
+        name: Flatpak
         with:
-          name: chatterino-macos-Qt-6.7.1-universal.dmg
+          name: chatterino-x86_64.flatpak
+          path: release-artifacts/
+
+      # macOS
+      - uses: actions/download-artifact@v7
+        name: macOS Qt6.9.3 dmg
+        with:
+          name: chatterino-macos-Qt-6.9.3-universal.dmg
           path: release-artifacts/
 
       - name: Rename artifacts
         run: |
           ls -l
           # Rename the macos build to indicate that it's for macOS 13.0 users
-          mv chatterino-macos-Qt-6.7.1-universal.dmg Chatterino-macOS-13.0-universal.dmg
+          mv chatterino-macos-Qt-6.9.3-universal.dmg Chatterino-macOS-13.0-universal.dmg
         working-directory: release-artifacts
         shell: bash
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -434,7 +456,7 @@ jobs:
         shell: bash
 
       - name: Create release
-        uses: ncipollo/release-action@v1.16.0
+        uses: ncipollo/release-action@v1.20.0
         with:
           replacesArtifacts: true
           allowUpdates: true

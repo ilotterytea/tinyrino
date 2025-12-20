@@ -6,7 +6,6 @@
 #include "messages/MessageBuilder.hpp"
 #include "messages/MessageElement.hpp"
 #include "mocks/BaseApplication.hpp"
-#include "singletons/Emotes.hpp"
 #include "singletons/Fonts.hpp"
 #include "singletons/Settings.hpp"
 #include "singletons/Theme.hpp"
@@ -26,7 +25,8 @@ class MockApplication : public mock::BaseApplication
 {
 public:
     MockApplication()
-        : windowManager(this->paths_, this->settings, this->theme, this->fonts)
+        : windowManager(this->args, this->paths_, this->settings, this->theme,
+                        this->fonts)
     {
     }
 

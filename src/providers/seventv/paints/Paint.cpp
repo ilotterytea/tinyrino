@@ -1,7 +1,6 @@
 #include "providers/seventv/paints/Paint.hpp"
 
 #include "Application.hpp"
-#include "common/Literals.hpp"
 #include "singletons/Settings.hpp"
 #include "singletons/Theme.hpp"
 
@@ -11,13 +10,13 @@
 
 namespace chatterino {
 
-using namespace literals;
+using namespace Qt::Literals;
 
 QPixmap Paint::getPixmap(const QString &text, const QFont &font,
-                         QColor userColor, QSize size, float scale,
+                         QColor userColor, QSizeF size, float scale,
                          float dpr) const
 {
-    QPixmap pixmap(size * dpr);
+    QPixmap pixmap((size * dpr).toSize());
     pixmap.setDevicePixelRatio(dpr);
     pixmap.fill(Qt::transparent);
 
@@ -51,7 +50,7 @@ QPixmap Paint::getPixmap(const QString &text, const QFont &font,
     if (!this->getDropShadows().empty() &&
         getSettings()->displaySevenTVPaintShadows)
     {
-        QPixmap outMap(size * dpr);
+        QPixmap outMap((size * dpr).toSize());
         outMap.setDevicePixelRatio(dpr);
         for (const auto &shadow : this->getDropShadows())
         {

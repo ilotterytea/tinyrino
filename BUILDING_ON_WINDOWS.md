@@ -34,7 +34,6 @@ When prompted which components to install, do the following:
 2. Unfold the top most tree element (latest stable Qt version, e.g. `Qt 6.5.3`)
 3. Under this version, select the following entries:
    - `MSVC 2019 64-bit` (or `MSVC 2022 64-bit` from Qt 6.8 onwards)
-   - `Qt 5 Compatibility Module`
    - `Additional Libraries` > `Qt Image Formats`
 4. Under the "Tools" tree element (at the bottom), ensure that `Qt Creator X.X.X` and `Debugging Tools for Windows` are selected. (they should be checked by default)
 5. Continue through the installer and let the installer finish installing Qt.
@@ -256,9 +255,9 @@ We can't use Invoke-RestMethod here, because it will automatically convert the b
 -->
 
 ```powershell
-(iwr "https://github.com/qt-labs/vstools/raw/dev/QtVsTools.Package/qt6.natvis.xml").Content.Replace('##NAMESPACE##::', '') | Out-File qt6.natvis
+(iwr "https://github.com/qt-labs/vs-debugtools/raw/refs/heads/dev/natvis/qt6.natvis").Content.Replace('##NAMESPACE##::', '') | Out-File qt6.natvis
 # [OR] using the permalink
-(iwr "https://github.com/qt-labs/vstools/raw/1c8ba533bd88d935be3724667e0087fd0796102c/QtVsTools.Package/qt6.natvis.xml").Content.Replace('##NAMESPACE##::', '') | Out-File qt6.natvis
+(iwr "https://github.com/qt-labs/vs-debugtools/raw/4f002491c61714684a8c6cbbd7290c1d891d94eb/natvis/qt6.natvis").Content.Replace('##NAMESPACE##::', '') | Out-File qt6.natvis
 ```
 
 Now you can debug the application and see Qt types rendered correctly.

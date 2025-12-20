@@ -4,9 +4,12 @@
 #include "controllers/hotkeys/Hotkey.hpp"
 #include "controllers/hotkeys/HotkeyCategory.hpp"
 #include "controllers/hotkeys/HotkeyModel.hpp"
-#include "singletons/Settings.hpp"
+#include "util/RapidJsonSerializeQString.hpp"  // IWYU pragma: keep
 
+#include <pajlada/settings.hpp>
+#include <QMessageBox>
 #include <QShortcut>
+#include <QWidget>
 
 namespace {
 
@@ -233,7 +236,8 @@ void HotkeyController::loadHotkeys()
     auto numCombinedDefaults = set.size();
 
     pajlada::Settings::Setting<std::vector<QString>>::set(
-        "/hotkeys/addedDefaults", std::vector<QString>(set.begin(), set.end()));
+        "/hotkeys/addedDefaults", std::vector<QString>(set.begin(), set.end()),
+        pajlada::Settings::SettingOption::CompareBeforeSet);
 
     qCDebug(chatterinoHotkeys) << "Loading hotkeys...";
     for (const auto &key : keys)
@@ -375,6 +379,7 @@ void HotkeyController::addDefaults(std::set<QString> &addedHotkeys)
                             QKeySequence("Alt+x"), "createClip",
                             std::vector<QString>(), "create clip");
 
+#ifndef Q_OS_MACOS
         this->tryAddDefault(addedHotkeys, HotkeyCategory::Split,
                             QKeySequence("Alt+left"), "focus", {"left"},
                             "focus left");
@@ -387,6 +392,7 @@ void HotkeyController::addDefaults(std::set<QString> &addedHotkeys)
         this->tryAddDefault(addedHotkeys, HotkeyCategory::Split,
                             QKeySequence("Alt+right"), "focus", {"right"},
                             "focus right");
+#endif
 
         this->tryAddDefault(addedHotkeys, HotkeyCategory::Split,
                             QKeySequence("PgUp"), "scrollPage", {"up"},

@@ -202,7 +202,7 @@ QFont Fonts::getFont(FontStyle type, float scale)
     return this->getOrCreateFontData(type, scale).font;
 }
 
-QFontMetrics Fonts::getFontMetrics(FontStyle type, float scale)
+QFontMetricsF Fonts::getFontMetrics(FontStyle type, float scale)
 {
     return this->getOrCreateFontData(type, scale).metrics;
 }
@@ -251,6 +251,9 @@ Fonts::FontData Fonts::createFontData(FontStyle type, float scale)
 #endif
         }
         break;
+
+        default:
+            break;
     }
 
     return font;

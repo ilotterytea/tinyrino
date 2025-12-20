@@ -2,6 +2,21 @@
 
 ## Unversioned
 
+- Minor: Increased radius of drop-shadows in paints to match the browser extension (#339)
+- Dev: Bumped Qt to 6.9.3 on Windows and macOS due to CVE-2025-10728 and CVE-2025-10729 (74077350da2d4cfff2ede0ce0ebb11654253b440)
+- Dev: Updated the macOS Homebrew bottles on x86_64 to Sonoma as Ventura was EOL'd 2025-Sep-15 (#336)
+
+## 7.5.4
+
+- Bugfix: Fixed certain paints such as the new "Coder Socks" one not displaying correctly in Chatterino (b306149e0a8d55f99dc9641e47c521b2f1c404a2)
+- Bugfix: Fixed emojis being inserted from shortcodes between words without spaces (some 7TV emotes couldn't be sent, see Chatterino/chatterino2#6356). (341af2f1e66fcc7572d6def4d4232c4cd7905d23)
+- Dev: Bumped OpenSSL on Windows to 3.5.2 (d9bb47a3e009457120e650138e170a3ef7d1cc56)
+
+## 7.5.4-beta.1
+
+- Bugfix: Fixed paints not appearing as with the browser extension (1d945c3d2bb86c662cd001908549c4e852baa6cb)
+- Dev: Bumped Qt to 6.9.1 on Windows and macOS (f1c50e43b60dcb0d6af44ddc16f23d1c54e4b639).
+
 ## 7.5.3
 
 - Dev: Downgrades are no longer treated as updates and the `v3` endpoint is now used to check for updates (9a05dc994ae6bba41ccc541156313eac558a15d7)

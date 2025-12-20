@@ -117,7 +117,7 @@ void HTTPRequest::execute(sol::this_state L)
     pl->httpRequests.push_back(this->shared_from_this());
 
     std::move(this->req_)
-        .onSuccess([L, hack](const NetworkResult &res) {
+        .onSuccess([pl, hack](const NetworkResult &res) {
             auto self = hack.lock();
             if (!self)
             {
@@ -127,11 +127,12 @@ void HTTPRequest::execute(sol::this_state L)
             {
                 return;
             }
-            lua::StackGuard guard(L);
-            (*self->cbSuccess)(HTTPResponse(res));
+
+            loggedVoidCall(*self->cbSuccess, u"HTTPRequest::on_success", pl,
+                           HTTPResponse(res));
             self->cbSuccess = std::nullopt;
         })
-        .onError([L, hack](const NetworkResult &res) {
+        .onError([pl, hack](const NetworkResult &res) {
             auto self = hack.lock();
             if (!self)
             {
@@ -141,18 +142,17 @@ void HTTPRequest::execute(sol::this_state L)
             {
                 return;
             }
-            lua::StackGuard guard(L);
-            (*self->cbError)(HTTPResponse(res));
+            loggedVoidCall(*self->cbError, u"HTTPRequest::on_error", pl,
+                           HTTPResponse(res));
             self->cbError = std::nullopt;
         })
-        .finally([L, hack]() {
+        .finally([pl, hack]() {
             auto self = hack.lock();
             if (!self)
             {
                 // this could happen if the plugin was deleted
                 return;
             }
-            auto *pl = getApp()->getPlugins()->getPluginByStatePtr(L);
             for (auto it = pl->httpRequests.begin();
                  it < pl->httpRequests.end(); it++)
             {
@@ -167,8 +167,7 @@ void HTTPRequest::execute(sol::this_state L)
             {
                 return;
             }
-            lua::StackGuard guard(L);
-            (*self->cbFinally)();
+            loggedVoidCall(*self->cbFinally, u"HTTPRequest::finally", pl);
             self->cbFinally = std::nullopt;
         })
         .timeout(this->timeout_)

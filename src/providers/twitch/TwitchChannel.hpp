@@ -47,10 +47,10 @@ struct BttvLiveUpdateEmoteRemoveMessage;
 
 class SeventvEmotes;
 namespace seventv::eventapi {
-    struct EmoteAddDispatch;
-    struct EmoteUpdateDispatch;
-    struct EmoteRemoveDispatch;
-    struct UserConnectionUpdateDispatch;
+struct EmoteAddDispatch;
+struct EmoteUpdateDispatch;
+struct EmoteRemoveDispatch;
+struct UserConnectionUpdateDispatch;
 }  // namespace seventv::eventapi
 
 struct TinyLiveUpdateEmoteUpdateAddMessage;
@@ -68,6 +68,24 @@ class TwitchIrcServer;
 class TwitchAccount;
 
 const int MAX_QUEUED_REDEMPTIONS = 16;
+
+namespace detail {
+
+/// isUnknownCommand checks if the given text contains a command that should not be forwarded to Twitch
+///
+/// "/ hello" should be allowed
+/// ". hello" should be allowed
+/// "/me hello" should be allowed
+/// ".me hello" should be allowed
+/// "/mebadcommand hello" should NOT be allowed
+/// ".mebadcommand hello" should NOT be allowed
+/// "/badcommand hello" should NOT be allowed
+/// "/badcommand hello" should NOT be allowed
+/// ".@badcommand hello" should NOT be allowed
+/// ".@badcommand hello" should NOT be allowed
+bool isUnknownCommand(const QString &text);
+
+}  // namespace detail
 
 class TwitchChannel final : public Channel, public ChannelChatters
 {
@@ -383,6 +401,9 @@ private:
 
     /** Joins (subscribes to) a Twitch channel for updates on BTTV. */
     void joinBttvChannel() const;
+
+    void updateBttvActivity();
+
     /**
      * Indicates an activity to 7TV in this channel for this user.
      * This is done at most once every 60s.
@@ -520,6 +541,8 @@ private:
      * Or: Up until this moment we don't need to send activity.
      */
     QDateTime nextSeventvActivity_;
+
+    QDateTime nextBttvActivity_;
 
     /** The platform of the last live emote update ("7TV", "BTTV", "FFZ"). */
     QString lastLiveUpdateEmotePlatform_;
