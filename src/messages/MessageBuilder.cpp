@@ -457,7 +457,7 @@ EmotePtr parseEmote(TwitchChannel *twitchChannel, const QString &userID,
             emote = twitchChannel->tinyEmote(instance.getUrl(), name);
             if (emote)
             {
-                return {emote, MessageElementFlag::TinyEmote, false};
+                return *emote;
             }
         }
 
@@ -499,7 +499,7 @@ EmotePtr parseEmote(TwitchChannel *twitchChannel, const QString &userID,
         emote = globalTinyEmotes->emote(instance.getUrl(), name);
         if (emote)
         {
-            return {emote, MessageElementFlag::TinyEmote, false};
+            return *emote;
         }
     }
 
