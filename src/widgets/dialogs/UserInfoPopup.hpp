@@ -72,7 +72,7 @@ private:
     void loadSevenTVAvatar(const QString &userID, bool isKick);
     void setSevenTVAvatar(const QString &filename, const QByteArray &format);
 
-    void loadTinyAvatar(const QString &instanceUrl, const HelixUser &user);
+    void loadTinyAvatar(const QString &instanceUrl, const QString &userID);
     void setTinyAvatar(const QString &filename);
 
     void saveCacheAvatar(const QByteArray &avatar,
@@ -115,6 +115,8 @@ private:
     // Set based on the "Automatically close usercard when it loses focus" setting
     // Pinned status is tracked in DraggablePopup::isPinned_.
     const bool closeAutomatically_;
+
+    bool isTwitchAvatarShown_;
 
     class TimeoutWidget;
     struct {

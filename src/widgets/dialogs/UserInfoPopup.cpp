@@ -31,6 +31,7 @@
 #include "singletons/StreamerMode.hpp"
 #include "singletons/Theme.hpp"
 #include "singletons/WindowManager.hpp"
+#include "UserInfoPopup.hpp"
 #include "util/Clipboard.hpp"
 #include "util/FormatTime.hpp"
 #include "util/Helpers.hpp"
@@ -1340,7 +1341,7 @@ void UserInfoPopup::loadAvatar(const QString &userID, const QString &pictureURL,
 
     if (instance != instances->end())
     {
-        this->loadTinyAvatar(instance->getUrl(), user);
+        this->loadTinyAvatar(instance->getUrl(), userID);
     }
 }
 
@@ -1427,7 +1428,7 @@ void UserInfoPopup::loadSevenTVAvatar(const QString &userID, bool isKick)
 }
 
 void UserInfoPopup::loadTinyAvatar(const QString &instanceUrl,
-                                   const HelixUser &user)
+                                   const QString &userID)
 {
     QString prefix = "https://";
 
@@ -1436,7 +1437,7 @@ void UserInfoPopup::loadTinyAvatar(const QString &instanceUrl,
         prefix = "";
     }
 
-    NetworkRequest(TINYEMOTES_USER_API.arg(prefix, instanceUrl, user.id))
+    NetworkRequest(TINYEMOTES_USER_API.arg(prefix, instanceUrl, userID))
         .header("Accept", "application/json")
         .timeout(20000)
         .onSuccess([this, prefix, instanceUrl](const NetworkResult &result) {
@@ -1449,7 +1450,7 @@ void UserInfoPopup::loadTinyAvatar(const QString &instanceUrl,
 
             // We're implementing custom caching here,
             // because we need the cached file path.
-            auto hash = hashSevenTVUrl(url);
+            auto hash = hashUrl(url);
             auto filename = getApp()->getPaths().cacheDirectory() + "/" + hash;
 
             if (this->helixAvatarUrl_ == url)
@@ -1490,6 +1491,28 @@ void UserInfoPopup::loadTinyAvatar(const QString &instanceUrl,
             return;
         })
         .execute();
+}
+
+void UserInfoPopup::setTinyAvatar(const QString &filename)
+{
+    auto *movie = new QMovie(filename, "webp", this);
+    if (!movie->isValid())
+    {
+        qCWarning(chatterinoTinyemotes)
+            << "Error reading Profile Picture, " << movie->lastErrorString();
+        return;
+    }
+
+    QObject::connect(movie, &QMovie::frameChanged, this, [this, movie] {
+        this->ui_.avatarButton->setPixmap(movie->currentPixmap());
+    });
+
+    movie->start();
+    this->tinyAvatar_ = movie;
+    this->ui_.switchAvatars->show();
+    this->ui_.switchAvatars->setText("Show Twitch");
+    this->currentShownAvatar_ = 2;
+    this->updateAvatarUrl();
 }
 
 void UserInfoPopup::setSevenTVAvatar(const QString &filename,
