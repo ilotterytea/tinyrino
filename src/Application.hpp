@@ -6,6 +6,7 @@
 
 #include "providers/tinyemotes/TinyBadges.hpp"
 #include "providers/tinyemotes/TinyEmotes.hpp"
+#include "singletons/Encryption.hpp"
 #include "singletons/NativeMessaging.hpp"
 
 #include <cassert>
@@ -126,6 +127,7 @@ public:
     virtual SeventvEmotes *getSeventvEmotes() = 0;
     virtual SeventvEventAPI *getSeventvEventAPI() = 0;
     virtual TinyEmotes *getTinyEmotes() = 0;
+    virtual TextEncryption *getTextEncryption() = 0;
     virtual ILinkResolver *getLinkResolver() = 0;
     virtual IStreamerMode *getStreamerMode() = 0;
     virtual ITwitchUsers *getTwitchUsers() = 0;
@@ -201,6 +203,7 @@ private:
     std::unique_ptr<SeventvEmotes> seventvEmotes;
     std::unique_ptr<SeventvEventAPI> seventvEventAPI;
     std::unique_ptr<TinyEmotes> tinyEmotes;
+    std::unique_ptr<TextEncryption> textEncryption;
     std::unique_ptr<ILinkResolver> linkResolver;
     std::unique_ptr<IStreamerMode> streamerMode;
     std::unique_ptr<ITwitchUsers> twitchUsers;
@@ -262,6 +265,7 @@ public:
     eventsub::IController *getEventSub() override;
 
     TinyEmotes *getTinyEmotes() override;
+    TextEncryption *getTextEncryption() override;
 
     ILinkResolver *getLinkResolver() override;
     IStreamerMode *getStreamerMode() override;

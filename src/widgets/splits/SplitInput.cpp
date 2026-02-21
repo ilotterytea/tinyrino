@@ -39,6 +39,7 @@
 #include <QPainter>
 #include <QSignalBlocker>
 
+#include <exception>
 #include <functional>
 
 using namespace Qt::Literals;
@@ -186,6 +187,27 @@ void SplitInput::initLayout()
 
     auto *shortcutFilter = new CmdDeleteKeyFilter(this);
     textEdit->installEventFilter(shortcutFilter);
+
+    hboxLayout.emplace<QCheckBox>("Encrypt").assign(
+        &this->ui_.encryptionCheckbox);
+    this->ui_.encryptionCheckbox->hide();
+    QObject::connect(this->ui_.encryptionCheckbox, &QCheckBox::toggled,
+                     [](bool checked) {
+                         getSettings()->encryptOnSend.setValue(checked);
+                     });
+
+    getSettings()->enableMessageEncryption.connect(
+        [this](const bool value, auto) {
+            if (value)
+            {
+                this->ui_.encryptionCheckbox->show();
+            }
+            else
+            {
+                this->ui_.encryptionCheckbox->hide();
+            }
+        },
+        this->managedConnections_);
 
     hboxLayout.emplace<LabelButton>("SEND").assign(&this->ui_.sendButton);
     this->ui_.sendButton->hide();
@@ -399,6 +421,31 @@ void SplitInput::openEmotePopup()
     this->emotePopup_->activateWindow();
 }
 
+QString try_encrypt_message(QString message)
+{
+    if (getSettings()->enableMessageEncryption.getValue() &&
+        getSettings()->encryptOnSend.getValue() &&
+        getSettings()->messagePassword.getValue().toStdString().size() > 0)
+    {
+        try
+        {
+            TextEncryption *cryptor = getApp()->getTextEncryption();
+            message = QString::fromStdString(cryptor->encrypt(
+                message.toStdString(),
+                getSettings()->messagePassword.getValue().toStdString(),
+                (EncryptionEncoding)getSettings()
+                    ->messageEncryptionEncoding.getValue()));
+        }
+        catch (const std::exception &ex)
+        {
+            qCWarning(chatterinoEncryption)
+                << "Failed to encrypt text: " << ex.what();
+        }
+    }
+
+    return message;
+}
+
 QString SplitInput::handleSendMessage(const std::vector<QString> &arguments)
 {
     auto c = this->split_->getChannel();
@@ -412,7 +459,7 @@ QString SplitInput::handleSendMessage(const std::vector<QString> &arguments)
         // standard message send behavior
         QString message = this->ui_.textEdit->toPlainText();
 
-        message = message.replace('\n', ' ');
+        message = try_encrypt_message(message.replace('\n', ' '));
         QString sendMessage =
             getApp()->getCommands()->execCommand(message, c, false);
 
@@ -445,7 +492,7 @@ QString SplitInput::handleSendMessage(const std::vector<QString> &arguments)
         }
     }
 
-    message = message.replace('\n', ' ');
+    message = try_encrypt_message(message.replace('\n', ' '));
     QString sendMessage =
         getApp()->getCommands()->execCommand(message, c, false);
 

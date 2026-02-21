@@ -67,6 +67,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <exception>
 #include <optional>
 #include <unordered_set>
 
@@ -1603,6 +1604,24 @@ std::pair<MessagePtrMut, HighlightAlert> MessageBuilder::makeIrcMessage(
 {
     assert(ircMessage != nullptr);
     assert(channel != nullptr);
+
+    // decoding the message
+    QString password = getSettings()->messagePassword.getValue();
+    if (getSettings()->enableMessageEncryption && password.size() > 0)
+    {
+        TextEncryption *cryptor = getApp()->getTextEncryption();
+        try
+        {
+            std::string text = content.toStdString();
+            EncryptionEncoding encoding =
+                cryptor->detect_encryption_encoding(text);
+            content = QString::fromStdString(
+                cryptor->decrypt(text, password.toStdString(), encoding));
+        }
+        catch (const std::exception &ex)
+        {
+        }
+    }
 
     auto tags = ircMessage->tags();
     if (args.allowIgnore)

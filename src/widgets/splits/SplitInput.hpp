@@ -7,6 +7,7 @@
 #include "messages/Message.hpp"
 #include "widgets/BaseWidget.hpp"
 
+#include <QCheckBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -168,6 +169,7 @@ protected:
         ResizingTextEdit *textEdit;
         QLabel *textEditLength;
         LabelButton *sendButton;
+        QCheckBox *encryptionCheckbox;
         QLabel *sendWaitStatus;
         SvgButton *emoteButton;
     } ui_;

@@ -823,6 +823,17 @@ public:
     BoolSetting preferTinyRoleBadgesOverCustom = {
         "/tinyemotes/preferTinyRoleBadgesOverCustom", false};
 
+    // Encryption
+    BoolSetting enableMessageEncryption = {
+        "/encryption/enableMessageEncryption", false};
+    BoolSetting encryptOnSend = {"/encryption/encryptOnSend", true};
+    IntSetting messageEncryptionEncoding = {
+        "/encryption/messageEncryptionEncoding",
+        0,
+    };
+    QStringSetting messagePassword = {"/encryption/messagePassword",
+                                      "CHANGE_THIS"};
+
     BoolSetting xChatterino7NoHttp2{"/x-chatterino7/no-http2", false};
 
 private:

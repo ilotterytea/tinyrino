@@ -584,6 +584,8 @@ set(SOURCE_FILES
         singletons/Updates.hpp
         singletons/WindowManager.cpp
         singletons/WindowManager.hpp
+        singletons/Encryption.hpp
+        singletons/Encryption.cpp
 
         singletons/helper/GifTimer.cpp
         singletons/helper/GifTimer.hpp

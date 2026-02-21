@@ -6,9 +6,12 @@
 #include "singletons/WindowManager.hpp"
 #include "util/LayoutCreator.hpp"
 #include "widgets/helper/EditableModelView.hpp"
+#include "widgets/settingspages/SettingWidget.hpp"
 
 #include <QHeaderView>
 #include <QTableView>
+
+#include <utility>
 
 namespace chatterino {
 
@@ -16,13 +19,51 @@ TinyrinoPage::TinyrinoPage()
 {
     LayoutCreator<TinyrinoPage> layoutCreator(this);
 
-    auto tabs = layoutCreator.emplace<QTabWidget>();
+    auto layout = layoutCreator.setLayoutType<QVBoxLayout>();
+    auto tabs = layout.emplace<QTabWidget>();
     this->tabWidget_ = tabs.getElement();
 
     auto *s = getSettings();
 
     auto generalTab = tabs.appendTab(new QVBoxLayout, "General");
     {
+        QCheckBox *enableEncryptionCheckbox = this->createCheckBox(
+            "Enable message encryption", getSettings()->enableMessageEncryption,
+            "Enable message encryption");
+        generalTab.append(enableEncryptionCheckbox);
+
+        generalTab.emplace<QLabel>("Password:");
+
+        auto *passwordInput = new QLineEdit();
+        passwordInput->setMaximumWidth(280);
+        generalTab.append(passwordInput);
+
+        auto &passwordSetting = getSettings()->messagePassword;
+        passwordInput->setText(passwordSetting);
+
+        QObject::connect(passwordInput, &QLineEdit::textChanged,
+                         [&passwordSetting](const QString &s) {
+                             passwordSetting = s;
+                         });
+
+        generalTab.emplace<QLabel>("Encryption encoding:");
+        auto *combo = generalTab.emplace<QComboBox>().getElement();
+        combo->addItems({"Don't use", "Hebrew"});
+
+        auto &setting = getSettings()->messageEncryptionEncoding;
+        setting.connect([combo](const int value) {
+            combo->setCurrentIndex(value);
+        });
+
+        QObject::connect(combo,
+                         QOverload<int>::of(&QComboBox::currentIndexChanged),
+                         [&setting](int index) {
+                             if (index != -1)
+                             {
+                                 setting = index;
+                             }
+                         });
+
         QCheckBox *preferRoleBadges =
             this->createCheckBox("Prefer role badges over custom badges",
                                  getSettings()->preferTinyRoleBadgesOverCustom,

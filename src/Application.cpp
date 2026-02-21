@@ -29,6 +29,7 @@
 #include "providers/tinyemotes/TinyEmotes.hpp"
 #include "providers/twitch/eventsub/Controller.hpp"
 #include "providers/twitch/TwitchBadges.hpp"
+#include "singletons/Encryption.hpp"
 #include "singletons/ImageUploader.hpp"
 #include "singletons/NativeMessaging.hpp"
 #ifdef CHATTERINO_HAVE_PLUGINS
@@ -211,6 +212,7 @@ Application::Application(Settings &_settings, const Paths &paths,
     , seventvEmotes(new SeventvEmotes)
     , seventvEventAPI(makeSeventvEventAPI(_settings))
     , tinyEmotes(new TinyEmotes)
+    , textEncryption(new TextEncryption)
     , linkResolver(new LinkResolver)
     , streamerMode(new StreamerMode)
     , twitchUsers(new TwitchUsers)
@@ -622,6 +624,14 @@ TinyEmotes *Application::getTinyEmotes()
     assert(this->tinyEmotes);
 
     return this->tinyEmotes.get();
+}
+
+TextEncryption *Application::getTextEncryption()
+{
+    assertInGuiThread();
+    assert(this->textEncryption);
+
+    return this->textEncryption.get();
 }
 
 SeventvEmotes *Application::getSeventvEmotes()

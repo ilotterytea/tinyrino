@@ -11,6 +11,7 @@ Q_DECLARE_LOGGING_CATEGORY(chatterinoArgs);
 Q_DECLARE_LOGGING_CATEGORY(chatterinoBenchmark);
 Q_DECLARE_LOGGING_CATEGORY(chatterinoBttv);
 Q_DECLARE_LOGGING_CATEGORY(chatterinoTinyemotes);
+Q_DECLARE_LOGGING_CATEGORY(chatterinoEncryption);
 Q_DECLARE_LOGGING_CATEGORY(chatterinoCache);
 Q_DECLARE_LOGGING_CATEGORY(chatterinoCommands);
 Q_DECLARE_LOGGING_CATEGORY(chatterinoCommon);
