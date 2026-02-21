@@ -15,6 +15,7 @@
 #include "controllers/ignores/IgnoreController.hpp"
 #include "controllers/ignores/IgnorePhrase.hpp"
 #include "controllers/userdata/UserDataController.hpp"
+#include "MessageElement.hpp"
 #include "messages/Emote.hpp"
 #include "messages/Image.hpp"
 #include "messages/Message.hpp"
@@ -1606,6 +1607,7 @@ std::pair<MessagePtrMut, HighlightAlert> MessageBuilder::makeIrcMessage(
     assert(channel != nullptr);
 
     // decoding the message
+    bool decrypted = false;
     QString password = getSettings()->messagePassword.getValue();
     if (getSettings()->enableMessageEncryption && password.size() > 0)
     {
@@ -1617,6 +1619,7 @@ std::pair<MessagePtrMut, HighlightAlert> MessageBuilder::makeIrcMessage(
                 cryptor->detect_encryption_encoding(text);
             content = QString::fromStdString(
                 cryptor->decrypt(text, password.toStdString(), encoding));
+            decrypted = true;
         }
         catch (const std::exception &ex)
         {
@@ -1730,6 +1733,25 @@ std::pair<MessagePtrMut, HighlightAlert> MessageBuilder::makeIrcMessage(
     if (shouldAddModerationElements)
     {
         builder.emplace<TwitchModerationElement>();
+    }
+
+    if (decrypted)
+    {
+        auto emote =
+            Emote{.name = EmoteName{},
+                  .images =
+                      ImageSet{
+                          Image::fromUrl({":/twitch/encrypted-18.webp"}, 1.0,
+                                         {18, 18}),
+                          Image::fromUrl({":/twitch/encrypted-36.webp"}, .5,
+                                         {36, 36}),
+                      },
+                  .tooltip = Tooltip{"Encrypted message"},
+                  .homePage = Url{}};
+
+        builder.emplace<BadgeElement>(
+            std::make_shared<const Emote>(std::move(emote)),
+            MessageElementFlag::Badges);
     }
 
     builder.appendTwitchBadges(tags, twitchChannel);
