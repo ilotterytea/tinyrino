@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2020 Contributors to Chatterino <https://chatterino.com>
+//
+// SPDX-License-Identifier: MIT
+
 #pragma once
 
 #include "common/Aliases.hpp"
@@ -393,7 +397,7 @@ struct HelixBadgeSet {
         const auto jsonVersions = json.value("versions").toArray();
         for (const auto &version : jsonVersions)
         {
-            versions.emplace_back(version.toObject());
+            this->versions.emplace_back(version.toObject());
         }
     }
 };
@@ -1036,7 +1040,8 @@ public:
 
     // https://dev.twitch.tv/docs/api/reference#create-clip
     virtual void createClip(
-        QString channelId, ResultCallback<HelixClip> successCallback,
+        QString channelId, QString title, std::optional<int> duration,
+        ResultCallback<HelixClip> successCallback,
         std::function<void(HelixClipError, QString)> failureCallback,
         std::function<void()> finallyCallback) = 0;
 
@@ -1233,6 +1238,20 @@ public:
         QString reason, ResultCallback<> successCallback,
         FailureCallback<HelixWarnUserError, QString> failureCallback) = 0;
 
+    // Monitor or restrict a user
+    // https://dev.twitch.tv/docs/api/reference/#add-suspicious-status-to-chat-user
+    virtual void addSuspiciousUser(
+        QString broadcasterID, QString moderatorID, QString userID,
+        bool restricted, ResultCallback<> successCallback,
+        FailureCallback<QString> failureCallback) = 0;
+
+    // Remove a user from monitored or restricted suspicious treatment
+    // https://dev.twitch.tv/docs/api/reference/#remove-suspicious-status-from-chat-user
+    virtual void removeSuspiciousUser(
+        QString broadcasterID, QString moderatorID, QString userID,
+        ResultCallback<> successCallback,
+        FailureCallback<QString> failureCallback) = 0;
+
     // Send a whisper
     // https://dev.twitch.tv/docs/api/reference#send-whisper
     virtual void sendWhisper(
@@ -1428,7 +1447,8 @@ public:
 
     // https://dev.twitch.tv/docs/api/reference#create-clip
     void createClip(
-        QString channelId, ResultCallback<HelixClip> successCallback,
+        QString channelId, QString title, std::optional<int> duration,
+        ResultCallback<HelixClip> successCallback,
         std::function<void(HelixClipError, QString)> failureCallback,
         std::function<void()> finallyCallback) final;
 
@@ -1625,6 +1645,19 @@ public:
         QString broadcasterID, QString moderatorID, QString userID,
         QString reason, ResultCallback<> successCallback,
         FailureCallback<HelixWarnUserError, QString> failureCallback) final;
+
+    // Monitor or restrict a user
+    // https://dev.twitch.tv/docs/api/reference/#add-suspicious-status-to-chat-user
+    void addSuspiciousUser(QString broadcasterID, QString moderatorID,
+                           QString userID, bool restricted,
+                           ResultCallback<> successCallback,
+                           FailureCallback<QString> failureCallback) final;
+
+    // Remove a user from monitored or restricted suspicious treatment
+    // https://dev.twitch.tv/docs/api/reference/#remove-suspicious-status-from-chat-user
+    void removeSuspiciousUser(QString broadcasterID, QString moderatorID,
+                              QString userID, ResultCallback<> successCallback,
+                              FailureCallback<QString> failureCallback) final;
 
     // Send a whisper
     // https://dev.twitch.tv/docs/api/reference#send-whisper

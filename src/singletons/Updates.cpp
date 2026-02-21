@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2018 Contributors to Chatterino <https://chatterino.com>
+//
+// SPDX-License-Identifier: MIT
+
 #include "singletons/Updates.hpp"
 
 #include "common/Literals.hpp"
@@ -42,6 +46,27 @@ const QString CHATTERINO_OS = u"freebsd"_s;
 const QString CHATTERINO_OS = u"unknown"_s;
 #endif
 
+QJsonValue getForArchitecture(const QJsonObject &obj, const QString &key)
+{
+    auto val = obj[key];
+
+#ifdef Q_PROCESSOR_ARM
+    QString armKey = key % u"_arm";
+    if (obj[armKey].isString())
+    {
+        val = obj[armKey];
+    }
+#elifdef Q_PROCESSOR_X86
+    QString x86Key = key % u"_x86";
+    if (obj[x86Key].isString())
+    {
+        val = obj[x86Key];
+    }
+#endif
+
+    return val;
+}
+
 }  // namespace
 
 namespace chatterino {
@@ -79,6 +104,14 @@ bool Updates::isDowngradeOf(const QString &online, const QString &current)
         return false;
     }
 
+    // TODO: remove once chatterino7's major version switches from `7` to `2`
+    if (currentVersion.major == 7 && onlineVersion.major == 2)
+    {
+        currentVersion = {2, currentVersion.minor, currentVersion.patch,
+                          currentVersion.prerelease_type,
+                          currentVersion.prerelease_number};
+    }
+
     return onlineVersion < currentVersion;
 }
 
@@ -104,12 +137,12 @@ void Updates::deleteOldFiles()
 
 const QString &Updates::getCurrentVersion() const
 {
-    return currentVersion_;
+    return this->currentVersion_;
 }
 
 const QString &Updates::getOnlineVersion() const
 {
-    return onlineVersion_;
+    return this->onlineVersion_;
 }
 
 void Updates::installUpdates()
@@ -195,10 +228,19 @@ void Updates::installUpdates()
                 file.flush();
                 file.close();
 
-                QProcess::startDetached(
-                    combinePath(QCoreApplication::applicationDirPath(),
-                                "updater.1/ChatterinoUpdater.exe"),
-                    {filename, "restart"});
+                auto updaterPath = Updates::portableUpdaterPath();
+                if (!QFile::exists(updaterPath))
+                {
+                    this->setStatus_(MissingPortableUpdater);
+                    return;
+                }
+                bool ok =
+                    QProcess::startDetached(updaterPath, {filename, "restart"});
+                if (!ok)
+                {
+                    this->setStatus_(RunUpdaterFailed);
+                    return;
+                }
 
                 QApplication::exit(0);
             })
@@ -313,7 +355,7 @@ void Updates::checkForUpdates()
     }
 
     // Disable updates if on nightly
-    if (Modes::instance().isNightly)
+    if (version.isNightly())
     {
         return;
     }
@@ -332,6 +374,10 @@ void Updates::checkForUpdates()
 
         /// Version available on every platform
         auto version = object["version"];
+        if (object["v2_version"_L1].isString())
+        {
+            version = object["v2_version"_L1].toString();
+        }
 
         if (!version.isString())
         {
@@ -343,24 +389,7 @@ void Updates::checkForUpdates()
 
 #    if defined(Q_OS_WIN) || defined(Q_OS_MACOS)
         /// Downloads an installer for the new version
-        auto updateExeUrl = object["updateexe"_L1];
-
-#        if defined(Q_PROCESSOR_ARM)
-
-        if (object["update_arm"_L1].isString())
-        {
-            updateExeUrl = object["update_arm"_L1];
-        }
-
-#        elif defined(Q_PROCESSOR_X86)
-
-        if (object["update_x86"_L1].isString())
-        {
-            updateExeUrl = object["update_x86"_L1];
-        }
-
-#        endif
-
+        auto updateExeUrl = getForArchitecture(object, u"updateexe"_s);
         if (!updateExeUrl.isString())
         {
             this->setStatus_(SearchFailed);
@@ -373,7 +402,7 @@ void Updates::checkForUpdates()
 
 #        ifdef Q_OS_WIN
         /// Windows portable
-        auto portableUrl = object["portable_download"];
+        auto portableUrl = getForArchitecture(object, "portable_download");
         if (!portableUrl.isString())
         {
             this->setStatus_(SearchFailed);
@@ -432,6 +461,12 @@ Updates::Status Updates::getStatus() const
     return this->status_;
 }
 
+QString Updates::portableUpdaterPath()
+{
+    return combinePath(QCoreApplication::applicationDirPath(),
+                       "updater.1/ChatterinoUpdater.exe");
+}
+
 bool Updates::shouldShowUpdateButton() const
 {
     switch (this->getStatus())
@@ -455,6 +490,8 @@ bool Updates::isError() const
         case SearchFailed:
         case DownloadFailed:
         case WriteFileFailed:
+        case MissingPortableUpdater:
+        case RunUpdaterFailed:
             return true;
 
         default:

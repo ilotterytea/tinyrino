@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2018 Contributors to Chatterino <https://chatterino.com>
+//
+// SPDX-License-Identifier: MIT
+
 #pragma once
 
 #include "singletons/Paths.hpp"
@@ -27,6 +31,7 @@ inline static const QString TINYEMOTES_AVATAR_API =
 class Channel;
 using ChannelPtr = std::shared_ptr<Channel>;
 class Label;
+class MarkdownLabel;
 class EditUserNotesDialog;
 class ChannelView;
 class Split;
@@ -61,9 +66,10 @@ private:
     void updateLatestMessages();
     void updateNotes();
 
-    void loadAvatar(const HelixUser &user);
+    void loadAvatar(const QString &userID, const QString &pictureURL,
+                    bool isKick);
 
-    void loadSevenTVAvatar(const HelixUser &user);
+    void loadSevenTVAvatar(const QString &userID, bool isKick);
     void setSevenTVAvatar(const QString &filename, const QByteArray &format);
 
     void loadTinyAvatar(const QString &instanceUrl, const HelixUser &user);
@@ -73,6 +79,11 @@ private:
                          const QString &filename) const;
 
     void updateAvatarUrl();
+
+    void updateKickUserData();
+    void onKickProfilePictureClick(Qt::MouseButton button);
+
+    QStringView platformName() const;
 
     bool isMod_{};
     bool isBroadcaster_{};
@@ -85,6 +96,8 @@ private:
     QString helixAvatarUrl_;
     QString seventvAvatarUrl_;
     std::map<QString, QString> tinyAvatarUrls_;
+
+    QString kickUserSlug_;
 
     // The channel the popup was opened from (e.g. /mentions or #forsen). Can be a special channel.
     ChannelPtr channel_;
@@ -103,6 +116,7 @@ private:
     // Pinned status is tracked in DraggablePopup::isPinned_.
     const bool closeAutomatically_;
 
+    class TimeoutWidget;
     struct {
         PixmapButton *avatarButton = nullptr;
         PixmapButton *localizedNameCopyButton = nullptr;
@@ -120,7 +134,7 @@ private:
 
         QCheckBox *block = nullptr;
         QCheckBox *ignoreHighlights = nullptr;
-        Label *notesPreview = nullptr;
+        MarkdownLabel *notesPreview = nullptr;
         LabelButton *notesAdd = nullptr;
 
         Label *noMessagesLabel = nullptr;
@@ -128,6 +142,8 @@ private:
 
         LabelButton *usercardLabel = nullptr;
         LabelButton *switchAvatars = nullptr;
+
+        TimeoutWidget *timeoutWidget = nullptr;
     } ui_;
 
     QMovie *seventvAvatar_ = nullptr;
@@ -135,6 +151,9 @@ private:
     int currentShownAvatar_ = 0;  // 0 - Twitch, 1 - 7TV, 2 - TinyEmotes
     QPixmap avatarPixmap_;
     QPointer<EditUserNotesDialog> editUserNotesDialog_;
+
+    bool isKick_ = false;
+    uint64_t kickUserID_ = 0;
 
     class TimeoutWidget : public BaseWidget
     {
@@ -145,8 +164,13 @@ private:
 
         pajlada::Signals::Signal<std::pair<Action, int>> buttonClicked;
 
+        void setMinTimeout(int minSecs);
+
     protected:
         void paintEvent(QPaintEvent *event) override;
+
+    private:
+        std::vector<std::pair<QWidget *, int>> timeoutButtons;
     };
 };
 

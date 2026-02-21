@@ -1,25 +1,29 @@
+// SPDX-FileCopyrightText: 2018 Contributors to Chatterino <https://chatterino.com>
+//
+// SPDX-License-Identifier: MIT
+
 #pragma once
 
 #include "common/FlagsEnum.hpp"
 #include "common/UniqueAccess.hpp"
 #include "controllers/highlights/HighlightCheck.hpp"
+#include "messages/Message.hpp"
 #include "singletons/Settings.hpp"
 
 #include <boost/signals2/connection.hpp>
 #include <pajlada/settings.hpp>
 #include <pajlada/settings/settinglistener.hpp>
+#include <pajlada/signals/signalholder.hpp>
 #include <QColor>
 #include <QUrl>
 
 #include <cstdint>
-#include <functional>
-#include <memory>
-#include <optional>
 #include <utility>
+#include <vector>
 
 namespace chatterino {
 
-class Badge;
+class TwitchBadge;
 struct MessageParseArgs;
 class AccountController;
 enum class MessageFlag : std::int64_t;
@@ -34,9 +38,10 @@ public:
      * @brief Checks the given message parameters if it matches our internal checks, and returns a result
      **/
     [[nodiscard]] std::pair<bool, HighlightResult> check(
-        const MessageParseArgs &args, const std::vector<Badge> &badges,
-        const QString &senderName, const QString &originalMessage,
-        const MessageFlags &messageFlags) const;
+        const MessageParseArgs &args,
+        const std::vector<TwitchBadge> &twitchBadges, const QString &senderName,
+        const QString &originalMessage, const MessageFlags &messageFlags,
+        MessagePlatform platform = MessagePlatform::AnyOrTwitch) const;
 
 private:
     /**

@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2017 Contributors to Chatterino <https://chatterino.com>
+//
+// SPDX-License-Identifier: MIT
+
 #pragma once
 
 #include "providers/tinyemotes/TinyBadges.hpp"
@@ -65,6 +69,9 @@ class Pronouns;
 namespace eventsub {
 class IController;
 }  // namespace eventsub
+class SpellChecker;
+
+class KickChatServer;
 
 class IApplication
 {
@@ -124,6 +131,8 @@ public:
     virtual ITwitchUsers *getTwitchUsers() = 0;
     virtual pronouns::Pronouns *getPronouns() = 0;
     virtual eventsub::IController *getEventSub() = 0;
+    virtual SpellChecker *getSpellChecker() = 0;
+    virtual KickChatServer *getKickChatServer() = 0;
 };
 
 class Application : public IApplication
@@ -196,6 +205,8 @@ private:
     std::unique_ptr<IStreamerMode> streamerMode;
     std::unique_ptr<ITwitchUsers> twitchUsers;
     std::unique_ptr<pronouns::Pronouns> pronouns;
+    std::unique_ptr<SpellChecker> spellChecker;
+    std::unique_ptr<KickChatServer> kickChatServer;
 #ifdef CHATTERINO_HAVE_PLUGINS
     std::unique_ptr<PluginController> plugins;
 #endif
@@ -255,6 +266,8 @@ public:
     ILinkResolver *getLinkResolver() override;
     IStreamerMode *getStreamerMode() override;
     ITwitchUsers *getTwitchUsers() override;
+    SpellChecker *getSpellChecker() override;
+    KickChatServer *getKickChatServer() override;
 
 private:
     void initNm(const Paths &paths);

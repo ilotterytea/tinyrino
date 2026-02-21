@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2017 Contributors to Chatterino <https://chatterino.com>
+//
+// SPDX-License-Identifier: MIT
+
 #include "Application.hpp"
 
 #include "common/Args.hpp"
@@ -12,9 +16,11 @@
 #include "controllers/ignores/IgnoreController.hpp"
 #include "controllers/notifications/NotificationController.hpp"
 #include "controllers/sound/ISoundController.hpp"
+#include "controllers/spellcheck/SpellChecker.hpp"
 #include "providers/bttv/BttvBadges.hpp"
 #include "providers/bttv/BttvEmotes.hpp"
 #include "providers/ffz/FfzEmotes.hpp"
+#include "providers/kick/KickChatServer.hpp"
 #include "providers/links/LinkResolver.hpp"
 #include "providers/pronouns/Pronouns.hpp"
 #include "providers/seventv/SeventvAPI.hpp"
@@ -209,6 +215,8 @@ Application::Application(Settings &_settings, const Paths &paths,
     , streamerMode(new StreamerMode)
     , twitchUsers(new TwitchUsers)
     , pronouns(new pronouns::Pronouns)
+    , spellChecker(new SpellChecker)
+    , kickChatServer(new KickChatServer)
 #ifdef CHATTERINO_HAVE_PLUGINS
     , plugins(new PluginController(paths))
 #endif
@@ -232,42 +240,6 @@ void Application::initialize(Settings &settings, const Paths &paths)
         getSettings()->currentVersion.getValue() != "" &&
         getSettings()->currentVersion.getValue() != CHATTERINO_VERSION)
     {
-#if defined(Q_OS_MACOS) && defined(Q_PROCESSOR_X86)
-        if (Version::instance().isRunningInRosetta())
-        {
-            auto *armBox =
-                new QMessageBox(QMessageBox::Information, "Tinyrino",
-                                "It looks like you're running the x86-64 "
-                                "version of Chatterio on "
-                                "Apple Silicon (ARM) using Rosetta2 emulation. "
-                                "There are native "
-                                "builds "
-                                "available (suffix: arm64).<br>Do you want to "
-                                "switch to the native "
-                                "version?",
-                                QMessageBox::Yes | QMessageBox::No);
-            armBox->setAttribute(Qt::WA_DeleteOnClose);
-            if (armBox->exec() == QMessageBox::Yes)
-            {
-                auto url = [] {
-                    if (Modes::instance().isNightly)
-                    {
-                        return QStringLiteral(
-                            "https://github.com/ilotterytea/tinyrino/"
-                            "releases/tag/nightly-build");
-                    }
-
-                    return QStringLiteral(
-                               "https://github.com/ilotterytea/tinyrino/"
-                               "releases/tag/v") +
-                           Version::instance().version();
-                }();
-                QDesktopServices::openUrl(url);
-                _Exit(0);
-            }
-        }
-#endif
-
         auto *box = new QMessageBox(QMessageBox::Information, "Tinyrino",
                                     "Show changelog?",
                                     QMessageBox::Yes | QMessageBox::No);
@@ -307,6 +279,7 @@ void Application::initialize(Settings &settings, const Paths &paths)
     this->seventvEmotes->loadGlobalEmotes();
 
     this->twitch->initialize();
+    this->kickChatServer->initialize();
 
     // Load live status
     this->notifications->initialize();
@@ -696,6 +669,22 @@ eventsub::IController *Application::getEventSub()
     return this->eventSub.get();
 }
 
+SpellChecker *Application::getSpellChecker()
+{
+    assertInGuiThread();
+    assert(this->spellChecker);
+
+    return this->spellChecker.get();
+}
+
+KickChatServer *Application::getKickChatServer()
+{
+    assertInGuiThread();
+    assert(this->kickChatServer);
+
+    return this->kickChatServer.get();
+}
+
 void Application::aboutToQuit()
 {
     ABOUT_TO_QUIT.store(true);
@@ -748,6 +737,7 @@ void Application::stop()
     this->logging.reset();
     this->fonts.reset();
     this->themes.reset();
+    this->spellChecker.reset();
 
     STOPPED.store(true);
 }

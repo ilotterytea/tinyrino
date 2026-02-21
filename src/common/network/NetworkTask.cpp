@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2024 Contributors to Chatterino <https://chatterino.com>
+//
+// SPDX-License-Identifier: MIT
+
 #include "common/network/NetworkTask.hpp"
 
 #include "Application.hpp"
@@ -12,6 +16,32 @@
 #include <QFile>
 #include <QNetworkReply>
 #include <QtConcurrent>
+
+#ifndef signals
+#    define signals public  // the file uses signals: but we build without that
+#endif
+#include <private/qnetworkreplyhttpimpl_p.h>  // for QNetworkReplyHttpImplPrivate
+#undef signals
+
+namespace {
+
+/// For DELETE requests, Qt remaps the operation to `DeleteOperation`:
+/// https://github.com/qt/qtbase/blob/bc60fa052b6163bcf444dab027bd6c1e717c9845/src/network/access/qnetworkreplyhttpimpl.cpp#L141-L161
+/// If we specified a body on the request. That will get dropped, because
+/// `DeleteOperation` has a special handler that won't use the body.
+void forceCustomOperation(QNetworkReply *reply)
+{
+    // We can't use dynamic_cast here, since some Qt builds are without RTTI.
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
+    auto *d = static_cast<QNetworkReplyPrivate *>(QObjectPrivate::get(reply));
+    if (!d)
+    {
+        return;  // not an HTTP request?
+    }
+    d->operation = QNetworkAccessManager::CustomOperation;
+}
+
+}  // namespace
 
 namespace chatterino::network::detail {
 
@@ -83,11 +113,36 @@ QNetworkReply *NetworkTask::createReply()
         case NetworkRequestType::Get:
             return accessManager->get(request);
 
-        case NetworkRequestType::Put:
-            return accessManager->put(request, data->payload);
+        case NetworkRequestType::Delete: {
+            if (data->payload.isEmpty())
+            {
+                return accessManager->deleteResource(request);
+            }
 
-        case NetworkRequestType::Delete:
-            return accessManager->deleteResource(data->request);
+            auto *reply = accessManager->sendCustomRequest(request, "DELETE",
+                                                           data->payload);
+            if (!reply)
+            {
+                return reply;
+            }
+            forceCustomOperation(reply);
+            return reply;
+        }
+
+        case NetworkRequestType::Put:
+            if (data->multiPartPayload)
+            {
+                assert(data->payload.isNull());
+
+                return accessManager->put(request,
+                                          data->multiPartPayload.get());
+            }
+            else
+            {
+                assert(data->multiPartPayload == nullptr);
+
+                return accessManager->put(request, data->payload);
+            }
 
         case NetworkRequestType::Post:
             if (data->multiPartPayload)
@@ -99,8 +154,11 @@ QNetworkReply *NetworkTask::createReply()
             }
             else
             {
+                assert(data->multiPartPayload == nullptr);
+
                 return accessManager->post(request, data->payload);
             }
+
         case NetworkRequestType::Patch:
             if (data->multiPartPayload)
             {
@@ -111,6 +169,8 @@ QNetworkReply *NetworkTask::createReply()
             }
             else
             {
+                assert(data->multiPartPayload == nullptr);
+
                 return NetworkManager::accessManager->sendCustomRequest(
                     request, "PATCH", data->payload);
             }
@@ -141,7 +201,24 @@ void NetworkTask::logReply()
 void NetworkTask::writeToCache(const QByteArray &bytes) const
 {
     std::ignore = QtConcurrent::run([data = this->data_, bytes] {
-        QFile cachedFile(getApp()->getPaths().cacheDirectory() + "/" +
+        if (isAppAboutToQuit())
+        {
+            qCDebug(chatterinoHTTP)
+                << "Skipping cache write for" << data->request.url()
+                << "because app is about to quit";
+            return;
+        }
+
+        auto *app = tryGetApp();
+        if (!app)
+        {
+            qCDebug(chatterinoHTTP)
+                << "Skipping cache write for" << data->request.url()
+                << "because app is null";
+            return;
+        }
+
+        QFile cachedFile(app->getPaths().cacheDirectory() + "/" +
                          data->getHash());
 
         if (cachedFile.open(QIODevice::WriteOnly))
@@ -205,7 +282,7 @@ void NetworkTask::finished()
         this->writeToCache(bytes);
     }
 
-    DebugCount::increase("http request success");
+    DebugCount::increase(DebugObject::HTTPRequestSuccess);
     this->logReply();
     this->data_->emitSuccess({reply->error(), status, bytes});
     this->data_->emitFinally();
