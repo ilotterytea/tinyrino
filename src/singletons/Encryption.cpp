@@ -30,6 +30,10 @@ EncryptionEncoding parse_encryption_encoding(const QString &text)
     {
         return EncryptionEncoding::Hebrew;
     }
+    else if (text == "chinese")
+    {
+        return EncryptionEncoding::Chinese;
+    }
     else
     {
         throw std::runtime_error("Unknown encryption encoding: " +
@@ -110,6 +114,10 @@ std::string TextEncryption::encrypt(const std::string &text,
         if (encoding == EncryptionEncoding::Hebrew)
         {
             symbol_size_bytes++;
+        }
+        else if (encoding == EncryptionEncoding::Chinese)
+        {
+            symbol_size_bytes += 2;
         }
 
         for (int i = 0; i < out.size(); i += symbol_size_bytes)
@@ -270,6 +278,8 @@ AlphabetMap TextEncryption::get_alphabet(
     {
         case EncryptionEncoding::Hebrew:
             return HEBREW_ALPHABET;
+        case EncryptionEncoding::Chinese:
+            return CHINESE_ALPHABET;
         default:
             throw std::runtime_error("Unsupported encoding");
     }
