@@ -897,6 +897,8 @@ set(SOURCE_FILES
         widgets/settingspages/SettingWidget.hpp
         widgets/settingspages/TinyrinoPage.hpp
         widgets/settingspages/TinyrinoPage.cpp
+        widgets/settingspages/TinyInstancesPage.hpp
+        widgets/settingspages/TinyInstancesPage.cpp
 
         widgets/splits/ClosedSplits.cpp
         widgets/splits/ClosedSplits.hpp

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "widgets/settingspages/GeneralPageView.hpp"
 #include "widgets/settingspages/SettingsPage.hpp"
 
 class QVBoxLayout;
@@ -9,17 +8,16 @@ namespace chatterino {
 
 class EditableModelView;
 
-class TinyrinoPage : public SettingsPage
+class TinyInstancesPage : public SettingsPage
 {
 public:
-    TinyrinoPage();
+    TinyInstancesPage();
 
     void onShow() final;
 
 private:
-    void initLayout(GeneralPageView &layout);
-
-    GeneralPageView *view{};
+    QTabWidget *tabWidget_;
+    EditableModelView *view_;
 };
 
 }  // namespace chatterino
