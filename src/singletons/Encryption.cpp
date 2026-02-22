@@ -324,6 +324,8 @@ AlphabetMap TextEncryption::get_alphabet(
             return HEBREW_ALPHABET;
         case EncryptionEncoding::Chinese:
             return CHINESE_ALPHABET;
+        case EncryptionEncoding::Nothing:
+            return DEFAULT_ALPHABET;
         default:
             throw std::runtime_error("Unsupported encoding");
     }
