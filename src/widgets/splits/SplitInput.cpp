@@ -196,6 +196,8 @@ void SplitInput::initLayout()
                          getSettings()->encryptOnSend.setValue(checked);
                      });
 
+    this->ui_.encryptionCheckbox->setChecked(getSettings()->encryptOnSend);
+
     getSettings()->enableMessageEncryption.connect(
         [this](const bool value, auto) {
             if (value)
