@@ -2,14 +2,17 @@
 
 #include "common/QLogging.hpp"
 #include "Encryption.hpp"
+#include "singletons/Settings.hpp"
 
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 
+#include <algorithm>
 #include <cctype>
 #include <iomanip>
 #include <ios>
+#include <random>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -19,11 +22,11 @@
 namespace chatterino {
 EncryptionEncoding parse_encryption_encoding(const QString &text)
 {
-    if (text == "Nothing")
+    if (text == "nothing")
     {
         return EncryptionEncoding::Nothing;
     }
-    else if (text == "Hebrew")
+    else if (text == "hebrew")
     {
         return EncryptionEncoding::Hebrew;
     }
@@ -96,6 +99,31 @@ std::string TextEncryption::encrypt(const std::string &text,
         out += it->second;
     }
 
+    if (getSettings()->randomSpaces)
+    {
+        std::string tmp;
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<> dis(0.0, 1.0);
+
+        int symbol_size_bytes = 1;
+        if (encoding == EncryptionEncoding::Hebrew)
+        {
+            symbol_size_bytes++;
+        }
+
+        for (int i = 0; i < out.size(); i += symbol_size_bytes)
+        {
+            tmp.append(out.substr(i, symbol_size_bytes));
+            if (dis(gen) < 0.1)
+            {
+                tmp += ' ';
+            }
+        }
+
+        out = tmp;
+    }
+
     return out;
 }
 
@@ -106,9 +134,14 @@ std::string TextEncryption::decrypt(const std::string &text,
     auto key = this->sha256_key(password);
     auto alphabet = this->reverse_alphabet(this->get_alphabet(encoding));
 
+    std::string spaceless_text = text;
+    spaceless_text.erase(
+        std::remove(spaceless_text.begin(), spaceless_text.end(), ' '),
+        spaceless_text.end());
+
     // translating to hex
     std::string hex;
-    for (int i = 0; i < text.size();)
+    for (int i = 0; i < spaceless_text.size();)
     {
         bool matched = false;
 
@@ -117,7 +150,8 @@ std::string TextEncryption::decrypt(const std::string &text,
             const std::string &symbol = kv.first;
             int len = symbol.size();
 
-            if (i + len <= text.size() && text.compare(i, len, symbol) == 0)
+            if (i + len <= spaceless_text.size() &&
+                spaceless_text.compare(i, len, symbol) == 0)
             {
                 hex += kv.second;
                 i += len;

@@ -828,6 +828,7 @@ public:
     BoolSetting enableMessageEncryption = {
         "/encryption/enableMessageEncryption", false};
     BoolSetting encryptOnSend = {"/encryption/encryptOnSend", true};
+    BoolSetting randomSpaces = {"/encryption/randomSpaces", false};
     EnumStringSetting<EncryptionEncoding> messageEncryptionEncoding = {
         "/encryption/encoding", EncryptionEncoding::Nothing};
     QStringSetting messagePassword = {"/encryption/messagePassword",

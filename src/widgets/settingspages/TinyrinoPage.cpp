@@ -50,6 +50,10 @@ void TinyrinoPage::initLayout(GeneralPageView &layout)
                                 s->enableMessageEncryption)
             ->addTo(layout);
 
+        SettingWidget::checkbox("Add random spaces after encryption",
+                                s->randomSpaces)
+            ->addTo(layout);
+
         SettingWidget::dropdown("Encryption encoding",
                                 s->messageEncryptionEncoding)
             ->addTo(layout);
