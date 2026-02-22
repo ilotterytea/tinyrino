@@ -827,7 +827,7 @@ public:
     // Encryption
     BoolSetting enableMessageEncryption = {
         "/encryption/enableMessageEncryption", false};
-    BoolSetting encryptOnSend = {"/encryption/encryptOnSend", true};
+    BoolSetting encryptOnSend = {"/encryption/encryptOnSend", false};
     BoolSetting randomSpaces = {"/encryption/randomSpaces", false};
     EnumStringSetting<EncryptionEncoding> messageEncryptionEncoding = {
         "/encryption/encoding", EncryptionEncoding::Nothing};
