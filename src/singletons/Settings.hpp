@@ -22,6 +22,7 @@
 #include "controllers/nicknames/Nickname.hpp"
 #include "controllers/sound/ISoundController.hpp"
 #include "controllers/tinyemotesinstances/TinyemotesInstance.hpp"
+#include "Encryption.hpp"
 #include "providers/emoji/EmojiStyle.hpp"
 #include "singletons/Toasts.hpp"
 #include "util/RapidJsonSerializeQString.hpp"  // IWYU pragma: keep
@@ -827,10 +828,8 @@ public:
     BoolSetting enableMessageEncryption = {
         "/encryption/enableMessageEncryption", false};
     BoolSetting encryptOnSend = {"/encryption/encryptOnSend", true};
-    IntSetting messageEncryptionEncoding = {
-        "/encryption/messageEncryptionEncoding",
-        0,
-    };
+    EnumStringSetting<EncryptionEncoding> messageEncryptionEncoding = {
+        "/encryption/encoding", EncryptionEncoding::Nothing};
     QStringSetting messagePassword = {"/encryption/messagePassword",
                                       "CHANGE_THIS"};
 

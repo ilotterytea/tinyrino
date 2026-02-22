@@ -433,8 +433,8 @@ QString try_encrypt_message(QString message)
             message = QString::fromStdString(cryptor->encrypt(
                 message.toStdString(),
                 getSettings()->messagePassword.getValue().toStdString(),
-                (EncryptionEncoding)getSettings()
-                    ->messageEncryptionEncoding.getValue()));
+                parse_encryption_encoding(
+                    getSettings()->messageEncryptionEncoding.getValue())));
         }
         catch (const std::exception &ex)
         {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <QString>
+
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -9,7 +11,8 @@ namespace chatterino {
 using AlphabetMap = std::unordered_map<char, std::string>;
 using ReverseAlphabetMap = std::unordered_map<std::string, char>;
 
-enum EncryptionEncoding { NOTHING = 0, HEBREW = 1 };
+enum class EncryptionEncoding : int { Nothing = 0, Hebrew = 1 };
+EncryptionEncoding parse_encryption_encoding(const QString &text);
 
 class TextEncryption
 {

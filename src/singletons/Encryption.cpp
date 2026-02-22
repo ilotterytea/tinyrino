@@ -17,6 +17,23 @@
 #include <vector>
 
 namespace chatterino {
+EncryptionEncoding parse_encryption_encoding(const QString &text)
+{
+    if (text == "Nothing")
+    {
+        return EncryptionEncoding::Nothing;
+    }
+    else if (text == "Hebrew")
+    {
+        return EncryptionEncoding::Hebrew;
+    }
+    else
+    {
+        throw std::runtime_error("Unknown encryption encoding: " +
+                                 text.toStdString());
+    }
+}
+
 std::string TextEncryption::encrypt(const std::string &text,
                                     const std::string &password,
                                     const EncryptionEncoding &encoding) const
@@ -72,8 +89,9 @@ std::string TextEncryption::encrypt(const std::string &text,
         auto it = alphabet.find(c);
         if (it == alphabet.end())
         {
-            throw std::runtime_error("Invalid hex from mapping " +
-                                     std::to_string(encoding));
+            throw std::runtime_error(
+                "Invalid hex from mapping " +
+                std::to_string(static_cast<int>(encoding)));
         }
         out += it->second;
     }
@@ -162,7 +180,7 @@ std::string TextEncryption::decrypt(const std::string &text,
 EncryptionEncoding TextEncryption::detect_encryption_encoding(
     const std::string &text) const
 {
-    return EncryptionEncoding::HEBREW;
+    return EncryptionEncoding::Hebrew;
 }
 
 std::vector<unsigned char> TextEncryption::sha256_key(
@@ -216,7 +234,7 @@ AlphabetMap TextEncryption::get_alphabet(
 {
     switch (encoding)
     {
-        case EncryptionEncoding::HEBREW:
+        case EncryptionEncoding::Hebrew:
             return HEBREW_ALPHABET;
         default:
             throw std::runtime_error("Unsupported encoding");
