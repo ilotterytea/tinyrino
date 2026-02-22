@@ -244,7 +244,7 @@ public:
         const MessageParseArgs &args, QString content,
         QString::size_type messageOffset,
         const std::shared_ptr<MessageThread> &thread = {},
-        const MessagePtr &parent = {});
+        const MessagePtr &parent = {}, const bool &encrypted = false);
 
     static MessagePtrMut makeSystemMessageWithUser(
         const QString &text, const QString &loginName,

@@ -754,13 +754,35 @@ void TwitchIrcServer::onMessageSendRequested(
         return;
     }
 
+    auto *s = getSettings();
+    QString out = message;
+
+    if (s->enableMessageEncryption && s->encryptOnSend &&
+        s->messagePassword.getValue().toStdString().size() > 0)
+    {
+        try
+        {
+            TextEncryption *cryptor = getApp()->getTextEncryption();
+            out = QString::fromStdString(cryptor->encrypt(
+                out.toStdString(), s->messagePassword.getValue().toStdString(),
+                parse_encryption_encoding(
+                    s->messageEncryptionEncoding.getValue())));
+        }
+        catch (const std::exception &ex)
+        {
+            qCWarning(chatterinoEncryption)
+                << "Failed to encrypt text: " << ex.what();
+            return;
+        }
+    }
+
     if (getSettings()->shouldSendHelixChat())
     {
-        sendHelixMessage(channel, message);
+        sendHelixMessage(channel, out);
     }
     else
     {
-        this->sendMessage(channel->getName(), message);
+        this->sendMessage(channel->getName(), out);
     }
 
     sent = true;

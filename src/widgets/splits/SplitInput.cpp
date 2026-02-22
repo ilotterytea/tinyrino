@@ -421,31 +421,6 @@ void SplitInput::openEmotePopup()
     this->emotePopup_->activateWindow();
 }
 
-QString try_encrypt_message(QString message)
-{
-    if (getSettings()->enableMessageEncryption.getValue() &&
-        getSettings()->encryptOnSend.getValue() &&
-        getSettings()->messagePassword.getValue().toStdString().size() > 0)
-    {
-        try
-        {
-            TextEncryption *cryptor = getApp()->getTextEncryption();
-            message = QString::fromStdString(cryptor->encrypt(
-                message.toStdString(),
-                getSettings()->messagePassword.getValue().toStdString(),
-                parse_encryption_encoding(
-                    getSettings()->messageEncryptionEncoding.getValue())));
-        }
-        catch (const std::exception &ex)
-        {
-            qCWarning(chatterinoEncryption)
-                << "Failed to encrypt text: " << ex.what();
-        }
-    }
-
-    return message;
-}
-
 QString SplitInput::handleSendMessage(const std::vector<QString> &arguments)
 {
     auto c = this->split_->getChannel();
@@ -459,7 +434,7 @@ QString SplitInput::handleSendMessage(const std::vector<QString> &arguments)
         // standard message send behavior
         QString message = this->ui_.textEdit->toPlainText();
 
-        message = try_encrypt_message(message.replace('\n', ' '));
+        message = message.replace('\n', ' ');
         QString sendMessage =
             getApp()->getCommands()->execCommand(message, c, false);
 
@@ -492,7 +467,7 @@ QString SplitInput::handleSendMessage(const std::vector<QString> &arguments)
         }
     }
 
-    message = try_encrypt_message(message.replace('\n', ' '));
+    message = message.replace('\n', ' ');
     QString sendMessage =
         getApp()->getCommands()->execCommand(message, c, false);
 

@@ -1601,30 +1601,11 @@ std::pair<MessagePtrMut, HighlightAlert> MessageBuilder::makeIrcMessage(
     /* mutable */ Channel *channel, const Communi::IrcMessage *ircMessage,
     const MessageParseArgs &args, /* mutable */ QString content,
     const QString::size_type messageOffset,
-    const std::shared_ptr<MessageThread> &thread, const MessagePtr &parent)
+    const std::shared_ptr<MessageThread> &thread, const MessagePtr &parent,
+    const bool &encrypted)
 {
     assert(ircMessage != nullptr);
     assert(channel != nullptr);
-
-    // decoding the message
-    bool decrypted = false;
-    QString password = getSettings()->messagePassword.getValue();
-    if (getSettings()->enableMessageEncryption && password.size() > 0)
-    {
-        TextEncryption *cryptor = getApp()->getTextEncryption();
-        try
-        {
-            std::string text = content.toStdString();
-            EncryptionEncoding encoding =
-                cryptor->detect_encryption_encoding(text);
-            content = QString::fromStdString(
-                cryptor->decrypt(text, password.toStdString(), encoding));
-            decrypted = true;
-        }
-        catch (const std::exception &ex)
-        {
-        }
-    }
 
     auto tags = ircMessage->tags();
     if (args.allowIgnore)
@@ -1735,7 +1716,7 @@ std::pair<MessagePtrMut, HighlightAlert> MessageBuilder::makeIrcMessage(
         builder.emplace<TwitchModerationElement>();
     }
 
-    if (decrypted)
+    if (encrypted)
     {
         auto emote =
             Emote{.name = EmoteName{},

@@ -423,9 +423,29 @@ void IrcMessageHandler::parsePrivMessageInto(
         }
     }
 
-    IrcMessageHandler::addMessage(
-        message, sink, channel, unescapeZeroWidthJoiner(message->content()),
-        *getApp()->getTwitch(), false, message->isAction());
+    QString msg = unescapeZeroWidthJoiner(message->content());
+    bool decrypted = false;
+    QString password = getSettings()->messagePassword.getValue();
+    if (getSettings()->enableMessageEncryption && password.size() > 0)
+    {
+        TextEncryption *cryptor = getApp()->getTextEncryption();
+        try
+        {
+            std::string text = msg.toStdString();
+            EncryptionEncoding encoding =
+                cryptor->detect_encryption_encoding(text);
+            msg = QString::fromStdString(
+                cryptor->decrypt(text, password.toStdString(), encoding));
+            decrypted = true;
+        }
+        catch (const std::exception &ex)
+        {
+        }
+    }
+
+    IrcMessageHandler::addMessage(message, sink, channel, msg,
+                                  *getApp()->getTwitch(), false,
+                                  message->isAction(), "", decrypted);
 
     if (message->tags().contains(u"pinned-chat-paid-amount"_s))
     {
@@ -1107,7 +1127,8 @@ void IrcMessageHandler::addMessage(Communi::IrcMessage *message,
                                    MessageSink &sink, TwitchChannel *chan,
                                    const QString &originalContent,
                                    ITwitchIrcServer &twitch, bool isSub,
-                                   bool isAction, const QString &msgType)
+                                   bool isAction, const QString &msgType,
+                                   const bool &encrypted)
 {
     assert(chan);
 
@@ -1225,7 +1246,7 @@ void IrcMessageHandler::addMessage(Communi::IrcMessage *message,
     args.allowIgnore = !isSub;
     auto [msg, alert] = MessageBuilder::makeIrcMessage(
         chan, message, args, content, messageOffset, replyCtx.thread,
-        replyCtx.parent);
+        replyCtx.parent, encrypted);
 
     if (msg)
     {
