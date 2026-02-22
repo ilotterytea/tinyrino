@@ -432,6 +432,8 @@ void IrcMessageHandler::parsePrivMessageInto(
         try
         {
             std::string text = msg.toStdString();
+            text.erase(std::remove(text.begin(), text.end(), ' '), text.end());
+
             EncryptionEncoding encoding =
                 cryptor->detect_encryption_encoding(text);
             msg = QString::fromStdString(
@@ -440,6 +442,8 @@ void IrcMessageHandler::parsePrivMessageInto(
         }
         catch (const std::exception &ex)
         {
+            qCDebug(chatterinoEncryption)
+                << "Failed to decrypt message: " << ex.what();
         }
     }
 

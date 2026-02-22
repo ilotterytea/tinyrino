@@ -142,14 +142,9 @@ std::string TextEncryption::decrypt(const std::string &text,
     auto key = this->sha256_key(password);
     auto alphabet = this->reverse_alphabet(this->get_alphabet(encoding));
 
-    std::string spaceless_text = text;
-    spaceless_text.erase(
-        std::remove(spaceless_text.begin(), spaceless_text.end(), ' '),
-        spaceless_text.end());
-
     // translating to hex
     std::string hex;
-    for (int i = 0; i < spaceless_text.size();)
+    for (int i = 0; i < text.size();)
     {
         bool matched = false;
 
@@ -158,8 +153,7 @@ std::string TextEncryption::decrypt(const std::string &text,
             const std::string &symbol = kv.first;
             int len = symbol.size();
 
-            if (i + len <= spaceless_text.size() &&
-                spaceless_text.compare(i, len, symbol) == 0)
+            if (i + len <= text.size() && text.compare(i, len, symbol) == 0)
             {
                 hex += kv.second;
                 i += len;
