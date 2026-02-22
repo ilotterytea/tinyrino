@@ -222,7 +222,51 @@ std::string TextEncryption::decrypt(const std::string &text,
 EncryptionEncoding TextEncryption::detect_encryption_encoding(
     const std::string &text) const
 {
-    return EncryptionEncoding::Hebrew;
+    bool has_hex = true, has_hebrew = false, has_chinese = false;
+
+    for (int i = 0; i < text.size();)
+    {
+        unsigned char c = text[i];
+        if (c < 0x80)
+        {
+            if (!std::isxdigit(c))
+                has_hex = false;
+            ++i;
+        }
+        else if ((c & 0xE0) == 0xC0)
+        {
+            std::string s = text.substr(i, 2);
+            has_hebrew = true;
+            has_hex = false;
+            i += 2;
+        }
+        else if ((c & 0xF0) == 0xE0)
+        {
+            std::string s = text.substr(i, 3);
+            has_chinese = true;
+            has_hex = false;
+            i += 3;
+        }
+        else
+        {
+            throw std::runtime_error("Invalid text");
+        }
+    }
+
+    if (has_hex && !has_hebrew && !has_chinese)
+    {
+        return EncryptionEncoding::Nothing;
+    }
+    else if (has_hebrew && !has_chinese)
+    {
+        return EncryptionEncoding::Hebrew;
+    }
+    else if (!has_hebrew && has_chinese)
+    {
+        return EncryptionEncoding::Chinese;
+    }
+
+    throw std::runtime_error("Invalid text");
 }
 
 std::vector<unsigned char> TextEncryption::sha256_key(
