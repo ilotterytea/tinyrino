@@ -192,6 +192,7 @@ void SplitInput::initLayout()
     hboxLayout.emplace<QCheckBox>("Encrypt").assign(
         &this->ui_.encryptionCheckbox);
     this->ui_.encryptionCheckbox->hide();
+    this->ui_.encryptionCheckbox->setFocusPolicy(Qt::NoFocus);
     QObject::connect(this->ui_.encryptionCheckbox, &QCheckBox::toggled,
                      [](bool checked) {
                          getSettings()->encryptOnSend.setValue(checked);
