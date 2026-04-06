@@ -5,11 +5,20 @@ Tinyrino is a fork of Chatterino7 (which is a fork of Chatterino 2). This fork s
 
 ### Features of Tinyrino
 
-- Multiple TinyEmotes instances.
+- Message encryption
+- TinyEmotes support
+
+#### Features of Chatterino7
+
+- 7TV Name Paints
+- 7TV Personal Emotes
+- 7TV Animated Profile Avatars
+- 4x Images (7TV and FFZ)
 
 ### Screenshots
 
-> TODO
+<img src="screenshot_1.png" width="40%" />
+<img src="screenshot_2.png" width="40%" />
 
 ### Downloads
 
