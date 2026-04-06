@@ -757,7 +757,10 @@ void TwitchIrcServer::onMessageSendRequested(
     auto *s = getSettings();
     QString out = message;
 
-    if (s->enableMessageEncryption && s->encryptOnSend &&
+    auto encryptedChannels = getSettings()->encryptedChannels.getValue();
+
+    if (s->enableMessageEncryption &&
+        encryptedChannels.value(channel->getName(), false) &&
         s->messagePassword.getValue().toStdString().size() > 0)
     {
         try

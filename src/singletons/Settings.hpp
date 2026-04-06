@@ -25,6 +25,7 @@
 #include "Encryption.hpp"
 #include "providers/emoji/EmojiStyle.hpp"
 #include "singletons/Toasts.hpp"
+#include "util/RapidJsonSerializeQHash.hpp"    // IWYU pragma: keep
 #include "util/RapidJsonSerializeQString.hpp"  // IWYU pragma: keep
 #include "widgets/NotebookEnums.hpp"
 
@@ -839,7 +840,8 @@ public:
     // Encryption
     BoolSetting enableMessageEncryption = {
         "/encryption/enableMessageEncryption", false};
-    BoolSetting encryptOnSend = {"/encryption/encryptOnSend", false};
+    ChatterinoSetting<QHash<QString, bool>> encryptedChannels = {
+        "/encryption/encryptedChannels", {}};
     BoolSetting randomSpaces = {"/encryption/randomSpaces", false};
     EnumStringSetting<EncryptionEncoding> messageEncryptionEncoding = {
         "/encryption/encoding", EncryptionEncoding::Nothing};

@@ -189,30 +189,6 @@ void SplitInput::initLayout()
     auto *shortcutFilter = new CmdDeleteKeyFilter(this);
     textEdit->installEventFilter(shortcutFilter);
 
-    hboxLayout.emplace<QCheckBox>("Encrypt").assign(
-        &this->ui_.encryptionCheckbox);
-    this->ui_.encryptionCheckbox->hide();
-    this->ui_.encryptionCheckbox->setFocusPolicy(Qt::NoFocus);
-    QObject::connect(this->ui_.encryptionCheckbox, &QCheckBox::toggled,
-                     [](bool checked) {
-                         getSettings()->encryptOnSend.setValue(checked);
-                     });
-
-    this->ui_.encryptionCheckbox->setChecked(getSettings()->encryptOnSend);
-
-    getSettings()->enableMessageEncryption.connect(
-        [this](const bool value, auto) {
-            if (value)
-            {
-                this->ui_.encryptionCheckbox->show();
-            }
-            else
-            {
-                this->ui_.encryptionCheckbox->hide();
-            }
-        },
-        this->managedConnections_);
-
     hboxLayout.emplace<LabelButton>("SEND").assign(&this->ui_.sendButton);
     this->ui_.sendButton->hide();
 
@@ -249,13 +225,24 @@ void SplitInput::initLayout()
         this->ui_.sendWaitStatus->setHidden(true);
         hbox->addWidget(this->ui_.sendWaitStatus);
 
+        auto inputButtonBox = box.emplace<QBoxLayout>(QBoxLayout::LeftToRight)
+                                  .withoutMargin()
+                                  .withoutSpacing();
+
+        this->ui_.encryptionCheckbox = new QCheckBox();
+        this->ui_.encryptionCheckbox->setFocusPolicy(Qt::NoFocus);
+        this->ui_.encryptionCheckbox->setChecked(false);
+        inputButtonBox->addWidget(this->ui_.encryptionCheckbox, 0,
+                                  Qt::AlignRight);
+        inputButtonBox->addSpacing(1);
+
         this->ui_.emoteButton = new SvgButton(
             {
                 .dark = ":/buttons/emote.svg",
                 .light = ":/buttons/emoteDark.svg",
             },
             nullptr, QSize{6, 3});
-        box->addWidget(this->ui_.emoteButton, 0, Qt::AlignRight);
+        inputButtonBox->addWidget(this->ui_.emoteButton, 0, Qt::AlignRight);
     }
 
     // ---- misc
@@ -272,6 +259,28 @@ void SplitInput::initLayout()
                                              [this] {
                                                  this->updateFonts();
                                              });
+
+    this->signalHolder_.managedConnect(this->split_->channelChanged, [this] {
+        auto encryptedChannels = getSettings()->encryptedChannels.getValue();
+        this->ui_.encryptionCheckbox->setChecked(encryptedChannels.value(
+            this->split_->getChannel()->getName(), false));
+    });
+
+    getSettings()->encryptedChannels.connect(
+        [this](const QHash<QString, bool> &encryptedChannels, auto) {
+            this->ui_.encryptionCheckbox->setChecked(encryptedChannels.value(
+                this->split_->getChannel()->getName(), false));
+        },
+        this->managedConnections_);
+
+    QObject::connect(
+        this->ui_.encryptionCheckbox, &QCheckBox::toggled, this,
+        [this](bool value) {
+            auto encryptedChannels =
+                getSettings()->encryptedChannels.getValue();
+            encryptedChannels[this->split_->getChannel()->getName()] = value;
+            getSettings()->encryptedChannels = encryptedChannels;
+        });
 
     // open emote popup
     QObject::connect(this->ui_.emoteButton, &Button::leftClicked, [this] {
