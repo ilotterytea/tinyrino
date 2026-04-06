@@ -70,7 +70,6 @@ void NetworkTask::run()
     const auto &timeout = this->data_->timeout;
     if (timeout.has_value())
     {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 3, 0)
         QObject::connect(this->reply_, &QNetworkReply::requestSent, this,
                          [this]() {
                              const auto &timeout = this->data_->timeout;
@@ -80,13 +79,6 @@ void NetworkTask::run()
                              QObject::connect(this->timer_, &QTimer::timeout,
                                               this, &NetworkTask::timeout);
                          });
-#else
-        this->timer_ = new QTimer(this);
-        this->timer_->setSingleShot(true);
-        this->timer_->start(timeout.value());
-        QObject::connect(this->timer_, &QTimer::timeout, this,
-                         &NetworkTask::timeout);
-#endif
     }
 
     QObject::connect(this->reply_, &QNetworkReply::finished, this,
@@ -191,10 +183,22 @@ void NetworkTask::logReply()
     }
     else
     {
+        QUtf8StringView payload = this->data_->payload;
+#if defined(NDEBUG) || QT_VERSION < QT_VERSION_CHECK(6, 10, 0)
+        if (this->data_->hideRequestBody)
+#else
+        static bool alwaysShowRequestBodies =
+            qEnvironmentVariableIntegerValue(
+                "CHATTERINO_HTTP_ALWAYS_SHOW_REQUEST_BODY")
+                .value_or(0) != 0;
+        if (this->data_->hideRequestBody && !alwaysShowRequestBodies)
+#endif
+        {
+            payload = "(redacted)";
+        }
         qCDebug(chatterinoHTTP).noquote()
             << this->data_->typeString()
-            << this->data_->request.url().toString() << status
-            << QString(this->data_->payload);
+            << this->data_->request.url().toString() << status << payload;
     }
 }
 

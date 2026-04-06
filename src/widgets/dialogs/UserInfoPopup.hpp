@@ -85,6 +85,8 @@ private:
 
     QStringView platformName() const;
 
+    void appendCommonProfileActions(QMenu *menu);
+
     bool isMod_{};
     bool isBroadcaster_{};
 
@@ -96,6 +98,7 @@ private:
     QString helixAvatarUrl_;
     QString seventvAvatarUrl_;
     std::map<QString, QString> tinyAvatarUrls_;
+    QString seventvUserID_;
 
     QString kickUserSlug_;
 
