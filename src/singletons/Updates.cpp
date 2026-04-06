@@ -371,8 +371,8 @@ void Updates::checkForUpdates()
     // See https://github.com/SevenTV/SevenTV/issues/48#issue-2193272289
     // for the proposed structure of the response.
     auto onSuccess = [this](const NetworkResult &result) {
-        const auto object = result.parseJson();
-        if (object.empty())
+        const auto json = result.parseJson();
+        if (json.empty())
         {
             return;
         }
@@ -456,7 +456,7 @@ void Updates::checkForUpdates()
             .execute();
     };
 
-    makeRequest(QString("https://assets.ilotterytea.kz/tinyrino/"
+    makeRequest(QString("https://assets.ilt.su/tinyrino/"
                         "version.php?os=%1&branch=%2")
                     .arg(CHATTERINO_OS)
                     .arg(currentBranch()));
