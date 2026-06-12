@@ -436,6 +436,12 @@ void IrcMessageHandler::parsePrivMessageInto(
         try
         {
             std::string text = msg.toStdString();
+            auto replyUserLogin = message->tag("reply-parent-user-login");
+            if (replyUserLogin.isValid())
+            {
+                text = text.substr(replyUserLogin.toString().length() + 2);
+            }
+
             text.erase(std::remove(text.begin(), text.end(), ' '), text.end());
 
             EncryptionEncoding encoding =

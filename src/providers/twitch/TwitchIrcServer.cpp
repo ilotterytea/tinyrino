@@ -804,14 +804,39 @@ void TwitchIrcServer::onReplySendRequested(
         return;
     }
 
+    auto *s = getSettings();
+    QString out = message;
+
+    auto encryptedChannels = s->encryptedChannels.getValue();
+
+    if (s->enableMessageEncryption &&
+        encryptedChannels.value(channel->getName(), false) &&
+        s->messagePassword.getValue().toStdString().size() > 0)
+    {
+        try
+        {
+            TextEncryption *cryptor = getApp()->getTextEncryption();
+            out = QString::fromStdString(cryptor->encrypt(
+                out.toStdString(), s->messagePassword.getValue().toStdString(),
+                parse_encryption_encoding(
+                    s->messageEncryptionEncoding.getValue())));
+        }
+        catch (const std::exception &ex)
+        {
+            qCWarning(chatterinoEncryption)
+                << "Failed to encrypt text: " << ex.what();
+            return;
+        }
+    }
+
     if (getSettings()->shouldSendHelixChat())
     {
-        sendHelixMessage(channel, message, replyId);
+        sendHelixMessage(channel, out, replyId);
     }
     else
     {
         this->sendRawMessage("@reply-parent-msg-id=" + replyId + " PRIVMSG #" +
-                             channel->getName() + " :" + message);
+                             channel->getName() + " :" + out);
     }
     sent = true;
 }
