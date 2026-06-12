@@ -24,6 +24,7 @@
 #include "controllers/tinyemotesinstances/TinyemotesInstance.hpp"
 #include "Encryption.hpp"
 #include "providers/emoji/EmojiStyle.hpp"
+#include "singletons/NativeMessaging.hpp"
 #include "singletons/Toasts.hpp"
 #include "util/RapidJsonSerializeQHash.hpp"    // IWYU pragma: keep
 #include "util/RapidJsonSerializeQString.hpp"  // IWYU pragma: keep
@@ -49,7 +50,7 @@ class Args;
 #else
 #    ifdef Q_OS_MACOS
 #        define DEFAULT_FONT_FAMILY "Helvetica Neue"
-#        define DEFAULT_FONT_SIZE 12
+#        define DEFAULT_FONT_SIZE 16
 #    else
 #        define DEFAULT_FONT_FAMILY "Arial"
 #        define DEFAULT_FONT_SIZE 11
@@ -120,6 +121,10 @@ constexpr std::optional<std::string_view> qmagicenumDisplayName(
     }
 }
 
+struct SettingsArgs {
+    bool isTest = false;
+};
+
 /// Settings which are available for reading and writing on the gui thread.
 // These settings are still accessed concurrently in the code but it is bad practice.
 class Settings
@@ -131,7 +136,7 @@ class Settings
 
 public:
     Settings(const Args &args, const QString &settingsDirectory,
-             bool isTest = false);
+             const SettingsArgs &settingsArgs = {});
     ~Settings();
 
     static Settings &instance();
@@ -161,6 +166,8 @@ public:
     BoolSetting showTimestamps = {"/appearance/messages/showTimestamps", true};
     BoolSetting animationsWhenFocused = {
         "/appearance/enableAnimationsWhenFocused", false};
+    BoolSetting hideMessageTimestampsWhenLive = {
+        "/appearance/messages/hideMessageTimestampsWhenLive", false};
     QStringSetting timestampFormat = {"/appearance/messages/timestampFormat",
                                       "h:mm"};
     BoolSetting showLastMessageIndicator = {
@@ -498,6 +505,10 @@ public:
         "/streamerMode/hideBlockedTermText",
         true,
     };
+    BoolSetting streamerModeHideUserNotes = {
+        "/streamerMode/hideUserNotes",
+        true,
+    };
 
     /// Blocked Users
     BoolSetting enableTwitchBlockedUsers = {"/ignore/enableTwitchBlockedUsers",
@@ -595,6 +606,19 @@ public:
         "/highlighting/watchStreak/enabled", true};
     QStringSetting watchStreakHighlightColor = {
         "/highlighting/watchStreak/color", ""};
+
+    BoolSetting enableAnnouncementHighlight = {
+        "/highlighting/announcement/enabled",
+        true,
+    };
+    QStringSetting announcementHighlightColor = {
+        "/highlighting/announcement/color",
+        "",
+    };
+    BoolSetting enableColoredAnnouncementHighlight = {
+        "/highlighting/announcement/coloredAnnouncement/enabled",
+        true,
+    };
 
     BoolSetting enableAutomodHighlight = {
         "/highlighting/automod/enabled",
@@ -826,11 +850,6 @@ public:
     };
 
     // Advanced
-    BoolSetting enableExperimentalEventSub = {
-        "/eventsub/enableExperimental",
-        true,
-    };
-
     QStringSetting additionalExtensionIDs{"/misc/additionalExtensionIDs", ""};
 
     // Tinyemotes
@@ -847,6 +866,17 @@ public:
         "/encryption/encoding", EncryptionEncoding::Nothing};
     QStringSetting messagePassword = {"/encryption/messagePassword",
                                       "CHANGE_THIS"};
+#ifndef Q_OS_WIN
+    QStringSetting customNativeMessagingManifestPath{
+        "/misc/extension/customManifestPath",
+        "",
+    };
+    EnumStringSetting<BrowserManifestFormat>
+        customNativeMessagingManifestFormat = {
+            "/misc/extension/customManifestFormat",
+            BrowserManifestFormat::Chrome,
+    };
+#endif
 
     BoolSetting xChatterino7NoHttp2{"/x-chatterino7/no-http2", false};
 

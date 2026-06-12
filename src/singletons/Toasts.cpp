@@ -289,8 +289,7 @@ void Toasts::ensureInitialized()
 
     auto *instance = WinToast::instance();
     instance->setAppName(L"Tinyrino");
-    instance->setAppUserModelId(
-        WinToast::configureAUMI(L"SevenTV", L"Tinyrino", L"", L""));
+    instance->setAppUserModelId(Version::instance().appUserModelID());
     if (!getSettings()->createShortcutForToasts)
     {
         instance->setShortcutPolicy(WinToast::SHORTCUT_POLICY_IGNORE);
@@ -351,7 +350,7 @@ void Toasts::ensureInitialized()
     {
         return;
     }
-    auto result = notify_init("Chatterino");
+    auto result = notify_init("Chatterino 7TV");
 
     if (result == 0)
     {
